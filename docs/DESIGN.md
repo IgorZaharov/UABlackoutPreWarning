@@ -43,7 +43,7 @@ Fixture check: queue 5.2 parses to 06:00–09:00, 14:00–16:00 and 19:00–21:0
 | F9 | Queue drop-down lists the row labels found on the page. |
 | F10 | Start with Windows via the per-user Run key. |
 | F11 | Standard Windows notification sound. |
-| F12 | UI language follows Windows: Ukrainian, otherwise English. |
+| F12 | Language drop-down (English, Українська — alphabetical); until chosen, follows Windows. Applied at once on Save. |
 
 ## Architecture
 
@@ -110,6 +110,7 @@ already known.
 | `StartWithWindows` | REG_DWORD | 0 | Checkbox |
 | `KnownQueues` | REG_SZ | `1.1;…;6.2` | Row labels last seen on the page |
 | `NotifiedSeries` | REG_SZ | empty | Last 20 warned series |
+| `Language` | REG_SZ | empty | `en`, `uk`, or empty = follow the Windows display language |
 
 Start with Windows writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\UABlackoutPreWarning`
 (the exe path in quotes) and rewrites it at every start, so a moved exe recovers after one manual launch.
@@ -122,7 +123,7 @@ Start with Windows writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\UA
 | `build.sh` | Linux/macOS with Mono | Development build (no manifest; DPI awareness is also set in code) and tests |
 | GitHub Actions | `windows-latest` | `build.cmd` on every push; a `v*` tag publishes a release with the exe |
 
-`tests/Core.Tests` is a dependency-free test runner (22 tests) covering the fixture, synthetic markup
+`tests/Core.Tests` is a dependency-free test runner (23 tests) covering the fixture, synthetic markup
 (no `<tbody>`, `bgcolor`, multiple days, malformed rows), planner rules, settings and strings.
 
 Manual test matrix before a release: Windows 10 22H2 x86 and x64, Windows 10 LTSC 2019 x64, Windows 11

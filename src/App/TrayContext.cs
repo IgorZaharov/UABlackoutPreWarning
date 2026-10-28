@@ -36,11 +36,14 @@ namespace UABlackoutPreWarning
         private static readonly int[] RetryMinutes = { 1, 2, 5 };
         private const int StaleAfterFailures = 3;
 
-        private readonly Strings S = Strings.Current();
+        private Strings S;
         private readonly RegistrySettingsStore store = new RegistrySettingsStore();
         private readonly WarningPlanner planner = new WarningPlanner();
         private readonly NotifyIcon tray;
         private readonly ContextMenuStrip menu;
+        private readonly ToolStripMenuItem menuOpen;
+        private readonly ToolStripMenuItem menuCheck;
+        private readonly ToolStripMenuItem menuClose;
         private readonly System.Windows.Forms.Timer warnTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer refreshTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer retryTimer = new System.Windows.Forms.Timer();
@@ -72,15 +75,18 @@ namespace UABlackoutPreWarning
 
             bool firstRun;
             settings = store.Load(out firstRun);
+            S = Strings.ForLanguage(settings.Language);
             planner.Load(settings.NotifiedSeries);
 
             menu = new ContextMenuStrip();
-            var open = new ToolStripMenuItem(S.MenuOpen, null, delegate { ShowWindow(); });
-            open.Font = new Font(open.Font, FontStyle.Bold);
-            menu.Items.Add(open);
-            menu.Items.Add(new ToolStripMenuItem(S.MenuCheckNow, null, delegate { RefreshNow(); }));
+            menuOpen = new ToolStripMenuItem(S.MenuOpen, null, delegate { ShowWindow(); });
+            menuOpen.Font = new Font(menuOpen.Font, FontStyle.Bold);
+            menuCheck = new ToolStripMenuItem(S.MenuCheckNow, null, delegate { RefreshNow(); });
+            menuClose = new ToolStripMenuItem(S.MenuClose, null, delegate { ExitApplication(); });
+            menu.Items.Add(menuOpen);
+            menu.Items.Add(menuCheck);
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(new ToolStripMenuItem(S.MenuClose, null, delegate { ExitApplication(); }));
+            menu.Items.Add(menuClose);
 
             tray = new NotifyIcon();
             tray.Icon = AppInfo.LoadIcon(SystemInformation.SmallIconSize);
@@ -141,6 +147,8 @@ namespace UABlackoutPreWarning
             bool urlChanged = !string.Equals(updated.ScheduleUrl, settings.ScheduleUrl, StringComparison.Ordinal);
             bool refreshChanged = updated.RefreshMinutes != settings.RefreshMinutes;
             bool autostartChanged = updated.StartWithWindows != settings.StartWithWindows;
+            bool languageChanged = !string.Equals(updated.Language, settings.Language, StringComparison.Ordinal) &&
+                                   Strings.ForLanguage(updated.Language).Code != S.Code;
 
             updated.KnownQueues = settings.KnownQueues;
             updated.NotifiedSeries = planner.Serialize();
@@ -148,6 +156,7 @@ namespace UABlackoutPreWarning
             TrySave();
 
             if (autostartChanged) TryApplyAutostart(settings.StartWithWindows);
+            if (languageChanged) SwitchLanguage();
 
             if (urlChanged)
             {
@@ -160,6 +169,27 @@ namespace UABlackoutPreWarning
                 RestartRefreshTimer();
             }
             Evaluate();
+        }
+
+        /// <summary>Applies the newly chosen language to the menu and reopens the window in it.</summary>
+        private void SwitchLanguage()
+        {
+            S = Strings.ForLanguage(settings.Language);
+            menuOpen.Text = S.MenuOpen;
+            menuCheck.Text = S.MenuCheckNow;
+            menuClose.Text = S.MenuClose;
+
+            if (form == null || form.IsDisposed) return;
+            bool wasVisible = form.Visible;
+            var location = form.Location;
+            form.AllowClose = true;
+            form.Close();
+            form.Dispose();
+            form = null;
+            if (!wasVisible) return;
+            ShowWindow();
+            form.StartPosition = FormStartPosition.Manual;
+            form.Location = location;
         }
 
         public void RefreshNow()

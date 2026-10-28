@@ -48,6 +48,7 @@ namespace UABlackoutPreWarning.Tests
             Run("Strings: both languages complete", StringsComplete);
             Run("Strings: formatting", StringsFormat);
             Run("Kyiv clock", KyivClockWorks);
+            Run("Language: options sorted, lookup and setting", LanguageOptions);
 
             Console.WriteLine();
             Console.WriteLine("{0} passed, {1} failed", passed, failed);
@@ -349,6 +350,28 @@ namespace UABlackoutPreWarning.Tests
             Equal("14:00–16:00", Strings.Range(new BlackoutSeries(T("14:00"), T("16:00"))), "range");
             Equal("23:00–01:30 (31.10)", Strings.Range(new BlackoutSeries(new DateTime(2026, 10, 30, 23, 0, 0),
                 new DateTime(2026, 10, 31, 1, 30, 0))), "range over midnight");
+        }
+
+        private static void LanguageOptions()
+        {
+            var options = Language.Options();
+            Equal(2, options.Count, "two languages");
+            Equal("English", options[0].Value, "English first (alphabetical)");
+            Equal("Українська", options[1].Value, "Ukrainian second");
+            True(Strings.ForLanguage("uk").IsUkrainian, "uk");
+            True(!Strings.ForLanguage("en").IsUkrainian, "en");
+            Equal("uk", Strings.Ukrainian().Code, "code uk");
+            Equal("Мова", Strings.Ukrainian().LabelLanguage, "caption uk");
+            Equal("Language", Strings.English().LabelLanguage, "caption en");
+
+            var settings = new AppSettings();
+            Equal("", settings.Language, "default follows Windows");
+            settings.Language = " UK ";
+            settings.Normalize();
+            Equal("uk", settings.Language, "normalised code");
+            settings.Language = "de";
+            settings.Normalize();
+            Equal("", settings.Language, "unknown code falls back to Windows");
         }
 
         private static void KyivClockWorks()

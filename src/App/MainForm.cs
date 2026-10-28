@@ -24,6 +24,8 @@ namespace UABlackoutPreWarning
         private readonly NumericUpDown numLead = new NumericUpDown();
         private readonly NumericUpDown numRefresh = new NumericUpDown();
         private readonly CheckBox chkAutostart = new CheckBox();
+        private readonly Label lblLanguage = new Label();
+        private readonly ComboBox cmbLanguage = new ComboBox();
         private readonly Button btnCheck = new Button();
         private readonly Button btnSave = new Button();
         private readonly Label lblSaved = new Label();
@@ -112,8 +114,18 @@ namespace UABlackoutPreWarning
             g.Controls.Add(Caption(S.Minutes, Col3 + 66, 95));
 
             chkAutostart.Text = S.StartWithWindows;
-            chkAutostart.SetBounds(12, 128, Inner, 22);
+            chkAutostart.SetBounds(12, 128, Inner - 230, 22);
             g.Controls.Add(chkAutostart);
+
+            // Interface language, alphabetical, each name in its own language.
+            cmbLanguage.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbLanguage.SetBounds(12 + Inner - 130, 126, 130, 23);
+            foreach (var option in Language.Options()) cmbLanguage.Items.Add(new LanguageItem(option.Key, option.Value));
+            g.Controls.Add(cmbLanguage);
+            lblLanguage.Text = S.LabelLanguage;
+            lblLanguage.AutoSize = true;
+            lblLanguage.Location = new Point(cmbLanguage.Left - 60, 130);
+            g.Controls.Add(lblLanguage);
 
             btnSave.Text = S.ButtonSave;
             btnSave.SetBounds(12 + Inner - 110, 164, 110, 30);
@@ -215,6 +227,11 @@ namespace UABlackoutPreWarning
             numLead.Value = Clamp(s.LeadMinutes, numLead);
             numRefresh.Value = Clamp(s.RefreshMinutes, numRefresh);
             chkAutostart.Checked = s.StartWithWindows;
+            var code = string.IsNullOrEmpty(s.Language) ? S.Code : s.Language;
+            foreach (LanguageItem item in cmbLanguage.Items)
+            {
+                if (item.Code == code) cmbLanguage.SelectedItem = item;
+            }
         }
 
         /// <summary>New row labels arrived from the site; keeps the user's current choice.</summary>
@@ -274,6 +291,7 @@ namespace UABlackoutPreWarning
             int gap = Font.Height / 2;
 
             lblBadge.Left = right - lblBadge.Width;
+            lblLanguage.Left = cmbLanguage.Left - gap - lblLanguage.Width;
             lblLegend.Left = right - lblLegend.Width;
 
             FitText(lblStatus, strip.Width);
@@ -304,6 +322,8 @@ namespace UABlackoutPreWarning
             s.LeadMinutes = (int)numLead.Value;
             s.RefreshMinutes = (int)numRefresh.Value;
             s.StartWithWindows = chkAutostart.Checked;
+            var language = cmbLanguage.SelectedItem as LanguageItem;
+            s.Language = language != null ? language.Code : S.Code;
             app.ApplySettings(s);
 
             lblSaved.Text = S.Saved;
@@ -349,6 +369,24 @@ namespace UABlackoutPreWarning
                 errors.Dispose();
             }
             base.Dispose(disposing);
+        }
+    }
+
+    /// <summary>An entry of the language drop-down.</summary>
+    internal sealed class LanguageItem
+    {
+        public LanguageItem(string code, string name)
+        {
+            Code = code;
+            Name = name;
+        }
+
+        public string Code { get; private set; }
+        public string Name { get; private set; }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 
