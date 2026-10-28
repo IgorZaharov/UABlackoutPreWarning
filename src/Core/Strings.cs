@@ -112,7 +112,7 @@ namespace UABlackoutPreWarning.Core
             s.NextCheck = "наступна перевірка {0}";
             s.NotChecked = "Ще не перевірялося";
             s.Loading = "Завантаження графіка…";
-            s.SiteNotice = "Повідомлення сайту: {0}";
+            s.SiteNotice = "Повідомлення сайту:{0}";
             s.QueueMissing = "Черги {0} немає на сторінці";
             s.NoGridForToday = "На сайті немає графіка на сьогодні";
             s.FetchFailed = "Не вдалося отримати графік ({0}). Повтор о {1}";
@@ -164,7 +164,7 @@ namespace UABlackoutPreWarning.Core
             s.NextCheck = "next check {0}";
             s.NotChecked = "Not checked yet";
             s.Loading = "Loading the schedule…";
-            s.SiteNotice = "Site notice: {0}";
+            s.SiteNotice = "Site notice:{0}";
             s.QueueMissing = "Queue {0} is not on the page";
             s.NoGridForToday = "The site has no schedule for today";
             s.FetchFailed = "Could not get the schedule ({0}). Retrying at {1}";

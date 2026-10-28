@@ -347,7 +347,14 @@ namespace UABlackoutPreWarning
 
                 if (page.NoticeLines.Count > 0)
                 {
-                    v.Notice = string.Format(S.SiteNotice, string.Join(" · ", page.NoticeLines.ToArray()));
+                    // One notice line per row; the window grows to fit them (capped so it stays on screen).
+                    const int maxLines = 12;
+                    var lines = page.NoticeLines.Count > maxLines
+                        ? page.NoticeLines.GetRange(0, maxLines).ToArray()
+                        : page.NoticeLines.ToArray();
+                    var text = string.Join(Environment.NewLine, lines);
+                    if (page.NoticeLines.Count > maxLines) text += Environment.NewLine + "…";
+                    v.Notice = string.Format(S.SiteNotice, Environment.NewLine + text);
                 }
             }
 
