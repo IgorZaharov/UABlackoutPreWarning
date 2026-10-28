@@ -40,9 +40,6 @@ namespace UABlackoutPreWarning
         private readonly Label lblNotice = new Label();
         private readonly ToolTip tips = new ToolTip();
         private readonly Timer savedTimer = new Timer();
-        private GroupBox settingsGroup;
-        private GroupBox statusGroup;
-        private bool hasNotice;
 
         /// <summary>When false, the close button only hides the window to the tray.</summary>
         public bool AllowClose;
@@ -64,10 +61,8 @@ namespace UABlackoutPreWarning
             KeyPreview = true;
             ClientSize = new Size(GroupWidth + 24, 486);
 
-            settingsGroup = BuildSettingsGroup(new Point(12, 8));
-            statusGroup = BuildStatusGroup(new Point(12, 226));
-            Controls.Add(settingsGroup);
-            Controls.Add(statusGroup);
+            Controls.Add(BuildSettingsGroup(new Point(12, 8)));
+            Controls.Add(BuildStatusGroup(new Point(12, 226)));
 
             AcceptButton = btnSave;
             errors.BlinkStyle = ErrorBlinkStyle.NeverBlink;
@@ -84,9 +79,9 @@ namespace UABlackoutPreWarning
 
         // ---- layout (96-DPI units; Windows scales them with AutoScaleMode.Dpi) --
 
-        private const int GroupWidth = 540;
+        private const int GroupWidth = 440;
         private const int Inner = GroupWidth - 24;   // usable width inside a group
-        private const int Col2 = 182, Col3 = 352;
+        private const int Col2 = 152, Col3 = 292;
 
         private GroupBox BuildSettingsGroup(Point at)
         {
@@ -140,8 +135,8 @@ namespace UABlackoutPreWarning
             lblCaption.ForeColor = SystemColors.GrayText;
             g.Controls.Add(lblCaption);
 
-            lblBadge.AutoSize = true;
-            lblBadge.Location = new Point(12 + Inner - 100, 20);
+            lblBadge.SetBounds(12 + Inner - 170, 20, 170, 22);
+            lblBadge.TextAlign = ContentAlignment.TopRight;
             lblBadge.Font = new Font(Font, FontStyle.Bold);
             g.Controls.Add(lblBadge);
 
@@ -159,8 +154,8 @@ namespace UABlackoutPreWarning
             lblToday.ForeColor = SystemColors.GrayText;
             g.Controls.Add(lblToday);
 
-            lblLegend.AutoSize = true;
-            lblLegend.Location = new Point(12 + Inner - 150, 82);
+            lblLegend.SetBounds(12 + Inner - 200, 82, 200, 22);
+            lblLegend.TextAlign = ContentAlignment.TopRight;
             lblLegend.ForeColor = SystemColors.GrayText;
             lblLegend.Text = S.Legend;
             g.Controls.Add(lblLegend);
@@ -168,14 +163,13 @@ namespace UABlackoutPreWarning
             strip.SetBounds(12, 106, Inner, 40);
             g.Controls.Add(strip);
 
-            lblStatus.UseMnemonic = false;
-            lblStatus.Location = new Point(12, 152);
+            lblStatus.SetBounds(12, 150, Inner, 38);
             lblStatus.ForeColor = SystemColors.GrayText;
             g.Controls.Add(lblStatus);
 
-            lblNotice.UseMnemonic = false;
-            lblNotice.Location = new Point(12, 176);
+            lblNotice.SetBounds(12, 190, Inner, 52);
             lblNotice.ForeColor = SystemColors.GrayText;
+            lblNotice.AutoEllipsis = true;
             g.Controls.Add(lblNotice);
             return g;
         }
@@ -248,43 +242,8 @@ namespace UABlackoutPreWarning
             lblStatus.Text = v.StatusLine;
             lblStatus.ForeColor = v.StatusIsError ? OffRed : SystemColors.GrayText;
             lblNotice.Text = v.Notice ?? "";
-            hasNotice = !string.IsNullOrEmpty(v.Notice);
-            lblNotice.Visible = hasNotice;
-            Relayout();
-        }
-
-        /// <summary>Sizes a label to its word-wrapped text at the given width.</summary>
-        private static void FitText(Label label, int width)
-        {
-            var flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPadding;
-            var size = TextRenderer.MeasureText(label.Text.Length == 0 ? " " : label.Text, label.Font,
-                new Size(width, int.MaxValue), flags);
-            label.Size = new Size(width, size.Height + label.Font.Height / 4);
-        }
-
-        /// <summary>
-        /// Right-aligns the badge and legend, wraps the status and site-notice text to the
-        /// strip width, and grows the status group and the window so nothing is cut off.
-        /// Works in scaled pixels, so it is correct at any DPI.
-        /// </summary>
-        private void Relayout()
-        {
-            SuspendLayout();
-            int right = strip.Right;
-            int gap = Font.Height / 2;
-
-            lblBadge.Left = right - lblBadge.Width;
-            lblLegend.Left = right - lblLegend.Width;
-
-            FitText(lblStatus, strip.Width);
-            FitText(lblNotice, strip.Width);
-            lblStatus.Top = strip.Bottom + gap / 2;
-            lblNotice.Top = lblStatus.Bottom + gap;
-
-            int contentBottom = hasNotice ? lblNotice.Bottom : lblStatus.Bottom;
-            statusGroup.Height = contentBottom + gap + gap / 2;
-            ClientSize = new Size(ClientSize.Width, statusGroup.Bottom + settingsGroup.Top + gap / 2);
-            ResumeLayout(true);
+            lblNotice.Visible = !string.IsNullOrEmpty(v.Notice);
+            tips.SetToolTip(lblNotice, v.Notice ?? "");
         }
 
         private void Save()
