@@ -93,12 +93,34 @@ namespace UABlackoutPreWarning
             SuspendLayout();
             T.Apply(this);
             cmbQueue.DrawMode = T.Dark ? DrawMode.OwnerDrawFixed : DrawMode.Normal;
+            MatchQueueHeight();
             themeToggle.DarkMode = T.Dark;
             UpdateToggleText();
             Theme.ApplyTitleBar(this, T.Dark);
             if (lastView != null) ShowStatus(lastView);   // keeps warning colours on the status labels
             ResumeLayout(true);
             Invalidate(true);
+        }
+
+        /// <summary>
+        /// In dark mode the queue list is owner-drawn and its height follows ItemHeight;
+        /// size it so the box is exactly as tall as the two number fields beside it.
+        /// </summary>
+        private void MatchQueueHeight()
+        {
+            if (T.Dark)
+            {
+                int chrome = cmbQueue.Height - cmbQueue.ItemHeight;      // border + padding of the closed box
+                int item = numLead.Height - chrome;
+                if (item > 0 && item != cmbQueue.ItemHeight) cmbQueue.ItemHeight = item;
+            }
+            cmbQueue.Top = numLead.Top + (numLead.Height - cmbQueue.Height) / 2;
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            MatchQueueHeight();   // after DPI scaling, when the final control heights are known
         }
 
         private void UpdateToggleText()
@@ -213,18 +235,19 @@ namespace UABlackoutPreWarning
             lblCountdown.Location = new Point(200, 54);
             g.Controls.Add(lblCountdown);
 
-            lblToday.SetBounds(12, 82, 220, 22);
+            lblToday.SetBounds(12, 80, 260, 22);
             lblToday.Tag = Theme.RoleSub;
             g.Controls.Add(lblToday);
 
             lblLegend.AutoSize = true;                 // right-aligned to the strip in FitLayout()
-            lblLegend.Location = new Point(12 + Inner - 150, 82);
+            lblLegend.Location = new Point(12 + Inner - 150, 80);
             lblLegend.Tag = Theme.RoleSub;
             lblLegend.Text = S.Legend;
             g.Controls.Add(lblLegend);
 
-            strip.SetBounds(12, 106, Inner, 50);
+            strip.SetBounds(12, 108, Inner, 50);
             g.Controls.Add(strip);
+            strip.BringToFront();
 
             lblStatus.SetBounds(12, 150, Inner, 38);   // height and position fitted in FitLayout()
             lblStatus.UseMnemonic = false;

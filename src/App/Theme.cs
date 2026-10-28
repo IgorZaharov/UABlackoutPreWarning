@@ -261,6 +261,20 @@ namespace UABlackoutPreWarning
             SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
         }
 
+        /// <summary>
+        /// WS_CLIPCHILDREN: a group box normally paints underneath its children, so a partial
+        /// repaint of the frame could cover the top of the day strip. Clipping prevents that.
+        /// </summary>
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                var cp = base.CreateParams;
+                cp.Style |= 0x02000000;
+                return cp;
+            }
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             if (!Dark)
