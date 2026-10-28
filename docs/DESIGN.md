@@ -29,6 +29,10 @@ The schedule is read from `https://www.ztoe.com.ua/unhooking-search.php`: server
 
 Fixture check: queue 5.2 parses to 06:00–09:00, 14:00–16:00 and 19:00–21:00.
 
+In the evening the site publishes two grids, today and tomorrow (`tests/Fixtures/ztoe-2026-10-28-2100.html`).
+Each grid's date comes from its header cell; the day strip shows the grid dated today, warnings cover both
+days, and a next outage on another day is labelled ("завтра 09:00–12:00").
+
 ## Requirements
 
 | ID | Requirement |
@@ -122,7 +126,7 @@ Start with Windows writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\UA
 | `build.sh` | Linux/macOS with Mono | Development build (no manifest; DPI awareness is also set in code) and tests |
 | GitHub Actions | `windows-latest` | `build.cmd` on every push; a `v*` tag publishes a release with the exe |
 
-`tests/Core.Tests` is a dependency-free test runner (22 tests) covering the fixture, synthetic markup
+`tests/Core.Tests` is a dependency-free test runner (23 tests) covering the fixture, synthetic markup
 (no `<tbody>`, `bgcolor`, multiple days, malformed rows), planner rules, settings and strings.
 
 Manual test matrix before a release: Windows 10 22H2 x86 and x64, Windows 10 LTSC 2019 x64, Windows 11

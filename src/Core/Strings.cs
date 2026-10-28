@@ -33,6 +33,7 @@ namespace UABlackoutPreWarning.Core
         public string NextBlackout { get; private set; }
         public string PowerOffNow { get; private set; }
         public string NoBlackouts { get; private set; }
+        public string Tomorrow { get; private set; }
         public string InTime { get; private set; }                // {0} = duration
         public string UntilTime { get; private set; }             // {0} = time
         public string TodayLabel { get; private set; }            // {0} = date
@@ -103,6 +104,7 @@ namespace UABlackoutPreWarning.Core
             s.NextBlackout = "Наступне відключення";
             s.PowerOffNow = "Зараз світла немає";
             s.NoBlackouts = "Відключень не заплановано";
+            s.Tomorrow = "завтра";
             s.InTime = "через {0}";
             s.UntilTime = "до {0}";
             s.TodayLabel = "Сьогодні, {0}";
@@ -155,6 +157,7 @@ namespace UABlackoutPreWarning.Core
             s.NextBlackout = "Next blackout";
             s.PowerOffNow = "Power is off now";
             s.NoBlackouts = "No blackouts scheduled";
+            s.Tomorrow = "tomorrow";
             s.InTime = "in {0}";
             s.UntilTime = "until {0}";
             s.TodayLabel = "Today, {0}";
@@ -206,6 +209,17 @@ namespace UABlackoutPreWarning.Core
         public static string Range(BlackoutSeries s)
         {
             return Time(s.Start) + "–" + EndTime(s);
+        }
+
+        /// <summary>
+        /// Range as seen from <paramref name="now"/>: plain for today, "завтра 09:00–12:00"
+        /// for tomorrow, "30.10 09:00–12:00" for a later day (the site can publish two days).
+        /// </summary>
+        public string RangeFrom(BlackoutSeries s, DateTime now)
+        {
+            if (s.Start.Date == now.Date) return Range(s);
+            if (s.Start.Date == now.Date.AddDays(1)) return Tomorrow + " " + Range(s);
+            return s.Start.ToString("dd.MM", CultureInfo.InvariantCulture) + " " + Range(s);
         }
 
         public static string Date(DateTime d)

@@ -291,7 +291,7 @@ namespace UABlackoutPreWarning
             var next = SeriesBuilder.Next(series, now);
             if (page == null && error != null) text = S.TooltipError;
             else if (current != null) text = string.Format(S.TooltipNow, Strings.EndTime(current));
-            else if (next != null) text = string.Format(S.TooltipNext, Strings.Range(next));
+            else if (next != null) text = string.Format(S.TooltipNext, S.RangeFrom(next, now));
             else if (page == null) text = S.AppName;
             else text = S.TooltipNone;
             text = S.AppName + "\n" + text;
@@ -330,7 +330,7 @@ namespace UABlackoutPreWarning
                 else if (next != null)
                 {
                     v.Caption = S.NextBlackout;
-                    v.Range = Strings.Range(next);
+                    v.Range = S.RangeFrom(next, now);
                     v.Countdown = string.Format(S.InTime, S.Duration(next.Start - now));
                 }
                 else

@@ -31,6 +31,7 @@ namespace UABlackoutPreWarning.Tests
             Run("Fixture: queue 5.2 series", FixtureQueue52);
             Run("Fixture: queue 4.2 ends at midnight", FixtureQueue42);
             Run("Fixture: decoding windows-1251 bytes", FixtureDecoding);
+            Run("Fixture: evening page with today and tomorrow", FixtureTwoDays);
             Run("Synthetic: raw markup without tbody, bgcolor cells", SyntheticRawMarkup);
             Run("Synthetic: two days join across midnight", MidnightJoin);
             Run("Synthetic: unknown queue gives no series", UnknownQueue);
@@ -101,6 +102,37 @@ namespace UABlackoutPreWarning.Tests
             var b = PageDecoder.Decode(bytes, null);
             Equal(a, b, "header and meta charset agree");
             True(a.Contains("Графіки погодинних відключень"), "Cyrillic decoded");
+        }
+
+        private static void FixtureTwoDays()
+        {
+            var bytes = File.ReadAllBytes(Path.Combine(fixtures, "ztoe-2026-10-28-2100.html"));
+            var page = ScheduleParser.Parse(PageDecoder.Decode(bytes, null));
+            Equal(2, page.Days.Count, "two grids");
+            Equal(new DateTime(2026, 10, 28), page.Days[0].Date, "today's grid first");
+            Equal(new DateTime(2026, 10, 29), page.Days[1].Date, "tomorrow's grid second");
+            Equal(new DateTime(2026, 10, 28, 21, 0, 0), page.UpdatedAt, "updated");
+
+            var series = SeriesBuilder.Build(page.Days, "5.2");
+            Equal("2026-10-28 06:00-2026-10-28 09:00|2026-10-28 14:00-2026-10-28 16:00|2026-10-28 19:00-2026-10-28 22:00|" +
+                  "2026-10-29 09:00-2026-10-29 12:00|2026-10-29 18:00-2026-10-29 21:00", Join(series), "5.2 both days");
+
+            // Today's strip uses the grid whose header date is today.
+            var now = new DateTime(2026, 10, 28, 22, 30, 0);
+            bool[] today = null;
+            foreach (var day in page.Days) if (day.Date == now.Date) today = day.GetRow("5.2");
+            True(today != null && today[38] && today[43] && !today[44] && !today[18], "today's row (19:00-22:00 off)");
+
+            // After today's last outage, the next one is tomorrow and says so.
+            var next = SeriesBuilder.Next(series, now);
+            Equal("завтра 09:00–12:00", Strings.Ukrainian().RangeFrom(next, now), "uk tomorrow");
+            Equal("tomorrow 09:00–12:00", Strings.English().RangeFrom(next, now), "en tomorrow");
+            Equal("09:00–12:00", Strings.English().RangeFrom(next, new DateTime(2026, 10, 29, 7, 0, 0)), "same day plain");
+
+            // Tomorrow morning's outage is announced at 08:50 tomorrow, not tonight.
+            var planner = new WarningPlanner();
+            Equal(0, planner.Due(series, now, 10).Count, "nothing due tonight");
+            Equal(1, planner.Due(series, new DateTime(2026, 10, 29, 8, 50, 0), 10).Count, "due at 08:50 tomorrow");
         }
 
         // ---- synthetic pages ----------------------------------------------------
