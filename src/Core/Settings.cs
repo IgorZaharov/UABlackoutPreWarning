@@ -29,7 +29,6 @@ namespace UABlackoutPreWarning.Core
             LeadMinutes = DefaultLeadMinutes;
             RefreshMinutes = DefaultRefreshMinutes;
             StartWithWindows = false;
-            Language = "";
             KnownQueues = string.Join(";", DefaultQueues);
             NotifiedSeries = "";
         }
@@ -39,9 +38,6 @@ namespace UABlackoutPreWarning.Core
         public int LeadMinutes { get; set; }
         public int RefreshMinutes { get; set; }
         public bool StartWithWindows { get; set; }
-
-        /// <summary>"uk", "en", or empty to follow the Windows display language.</summary>
-        public string Language { get; set; }
 
         /// <summary>Row labels last seen on the page, semicolon-separated.</summary>
         public string KnownQueues { get; set; }
@@ -65,8 +61,6 @@ namespace UABlackoutPreWarning.Core
             if (RefreshMinutes < MinRefresh || RefreshMinutes > MaxRefresh) RefreshMinutes = DefaultRefreshMinutes;
             if (ParseQueues(KnownQueues).Count == 0) KnownQueues = string.Join(";", DefaultQueues);
             if (NotifiedSeries == null) NotifiedSeries = "";
-            Language = Language == null ? "" : Language.Trim().ToLowerInvariant();
-            if (Language.Length > 0 && !UABlackoutPreWarning.Core.Language.IsKnown(Language)) Language = "";
         }
 
         /// <summary>Queue labels for the drop-down; always contains the selected queue.</summary>

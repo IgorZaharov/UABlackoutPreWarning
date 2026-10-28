@@ -3,7 +3,6 @@
 // Licensed under the GNU General Public License v3.0 or later. See LICENSE.
 
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 
 namespace UABlackoutPreWarning.Core
@@ -12,33 +11,6 @@ namespace UABlackoutPreWarning.Core
     /// UI text in Ukrainian and English. Kept in code (not .resx) so the
     /// application stays a single exe without satellite assemblies.
     /// </summary>
-    /// <summary>Interface languages offered in the window.</summary>
-    public static class Language
-    {
-        public const string English = "en";
-        public const string Ukrainian = "uk";
-
-        /// <summary>Code and native name of each language, sorted alphabetically by name.</summary>
-        public static List<KeyValuePair<string, string>> Options()
-        {
-            var list = new List<KeyValuePair<string, string>>
-            {
-                new KeyValuePair<string, string>(Ukrainian, "Українська"),
-                new KeyValuePair<string, string>(English, "English")
-            };
-            list.Sort(delegate(KeyValuePair<string, string> a, KeyValuePair<string, string> b)
-            {
-                return string.Compare(a.Value, b.Value, StringComparison.InvariantCultureIgnoreCase);
-            });
-            return list;
-        }
-
-        public static bool IsKnown(string code)
-        {
-            return code == English || code == Ukrainian;
-        }
-    }
-
     public sealed class Strings
     {
         public string AppName { get; private set; }
@@ -53,7 +25,6 @@ namespace UABlackoutPreWarning.Core
         public string LabelRefresh { get; private set; }
         public string Minutes { get; private set; }
         public string StartWithWindows { get; private set; }
-        public string LabelLanguage { get; private set; }
         public string ButtonCheckNow { get; private set; }
         public string ButtonSave { get; private set; }
 
@@ -110,23 +81,6 @@ namespace UABlackoutPreWarning.Core
             return ForCulture(CultureInfo.CurrentUICulture);
         }
 
-        /// <summary>
-        /// Strings for a saved language code ("uk" or "en"); an empty or unknown code
-        /// follows the Windows display language.
-        /// </summary>
-        public static Strings ForLanguage(string code)
-        {
-            if (string.Equals(code, Language.Ukrainian, StringComparison.OrdinalIgnoreCase)) return Ukrainian();
-            if (string.Equals(code, Language.English, StringComparison.OrdinalIgnoreCase)) return English();
-            return Current();
-        }
-
-        /// <summary>The language code these strings belong to.</summary>
-        public string Code
-        {
-            get { return IsUkrainian ? Language.Ukrainian : Language.English; }
-        }
-
         public static Strings Ukrainian()
         {
             var s = new Strings();
@@ -142,7 +96,6 @@ namespace UABlackoutPreWarning.Core
             s.LabelRefresh = "Перевіряти кожні";
             s.Minutes = "хв";
             s.StartWithWindows = "Запускати разом з Windows";
-            s.LabelLanguage = "Мова";
             s.ButtonCheckNow = "Перевірити зараз";
             s.ButtonSave = "Зберегти";
             s.GroupStatus = "Стан";
@@ -195,7 +148,6 @@ namespace UABlackoutPreWarning.Core
             s.LabelRefresh = "Check every";
             s.Minutes = "min";
             s.StartWithWindows = "Start with Windows";
-            s.LabelLanguage = "Language";
             s.ButtonCheckNow = "Check now";
             s.ButtonSave = "Save";
             s.GroupStatus = "Status";

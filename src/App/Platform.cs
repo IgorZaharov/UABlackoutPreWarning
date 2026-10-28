@@ -34,7 +34,6 @@ namespace UABlackoutPreWarning
                     s.StartWithWindows = GetInt(key, "StartWithWindows", 0) != 0;
                     s.KnownQueues = GetString(key, "KnownQueues", s.KnownQueues);
                     s.NotifiedSeries = GetString(key, "NotifiedSeries", s.NotifiedSeries);
-                    s.Language = GetString(key, "Language", s.Language);
                 }
             }
             s.Normalize();
@@ -52,7 +51,6 @@ namespace UABlackoutPreWarning
                 key.SetValue("StartWithWindows", s.StartWithWindows ? 1 : 0, RegistryValueKind.DWord);
                 key.SetValue("KnownQueues", s.KnownQueues ?? "", RegistryValueKind.String);
                 key.SetValue("NotifiedSeries", s.NotifiedSeries ?? "", RegistryValueKind.String);
-                key.SetValue("Language", s.Language ?? "", RegistryValueKind.String);
             }
         }
 
