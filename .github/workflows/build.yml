@@ -36,6 +36,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # README links to releases/latest/download/UABlackoutPreWarning.zip - keep this file name.
+          $PSNativeCommandUseErrorActionPreference = $false
           $tag = if ('${{ github.event_name }}' -eq 'release') { '${{ github.event.release.tag_name }}' } else { '${{ github.ref_name }}' }
           Compress-Archive -Path out/UABlackoutPreWarning.exe -DestinationPath out/UABlackoutPreWarning.zip -Force
           gh release view $tag *> $null
