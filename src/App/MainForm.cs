@@ -168,7 +168,8 @@ namespace UABlackoutPreWarning
             strip.SetBounds(12, 106, Inner, 40);
             g.Controls.Add(strip);
 
-            lblStatus.SetBounds(12, 150, Inner, 38);
+            lblStatus.SetBounds(12, 150, Inner, 38);   // height and position fitted in FitLayout()
+            lblStatus.UseMnemonic = false;
             lblStatus.ForeColor = SystemColors.GrayText;
             g.Controls.Add(lblStatus);
 
@@ -263,15 +264,28 @@ namespace UABlackoutPreWarning
             lblLegend.Left = strip.Right - lblLegend.Width;
 
             int gap = Font.Height / 2;
-            var flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPadding;
-            var needed = TextRenderer.MeasureText(lblNotice.Text.Length == 0 ? " " : lblNotice.Text, lblNotice.Font,
-                new Size(strip.Width, int.MaxValue), flags);
-            lblNotice.Size = new Size(strip.Width, needed.Height + gap / 2);
+
+            // Status line and site notice are sized to their wrapped text and stacked
+            // below the strip, so neither can cover the other.
+            FitHeight(lblStatus, strip.Width, 0);
+            lblStatus.Top = strip.Bottom + gap / 2;
+            FitHeight(lblNotice, strip.Width, gap);
+            lblNotice.Top = lblStatus.Bottom + gap;
+            lblNotice.BringToFront();
 
             int bottom = hasNotice ? lblNotice.Bottom : lblStatus.Bottom;
-            statusGroup.Height = bottom + gap + gap / 2;
-            ClientSize = new Size(ClientSize.Width, statusGroup.Bottom + settingsGroup.Top + gap / 2);
+            statusGroup.Height = bottom + 2 * gap;
+            ClientSize = new Size(ClientSize.Width, statusGroup.Bottom + settingsGroup.Top + gap);
             ResumeLayout(true);
+        }
+
+        /// <summary>Sets a label's size to its word-wrapped text plus <paramref name="extra"/> pixels.</summary>
+        private static void FitHeight(Label label, int width, int extra)
+        {
+            var flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl;
+            var needed = TextRenderer.MeasureText(label.Text.Length == 0 ? " " : label.Text, label.Font,
+                new Size(width, int.MaxValue), flags);
+            label.Size = new Size(width, needed.Height + extra);
         }
 
         private void Save()
