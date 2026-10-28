@@ -27,6 +27,7 @@ namespace UABlackoutPreWarning
         private readonly Button btnCheck = new Button();
         private readonly Button btnSave = new Button();
         private readonly Label lblSaved = new Label();
+        private readonly LinkLabel lnkAbout = new LinkLabel();
         private readonly ErrorProvider errors = new ErrorProvider();
 
         private readonly Label lblCaption = new Label();
@@ -126,7 +127,13 @@ namespace UABlackoutPreWarning
             g.Controls.Add(btnSave);
             g.Controls.Add(btnCheck);
 
-            lblSaved.SetBounds(12, 168, btnCheck.Left - 20, 22);
+            lnkAbout.Text = S.MenuAbout;
+            lnkAbout.AutoSize = true;
+            lnkAbout.Location = new Point(12, 172);
+            lnkAbout.LinkClicked += delegate { app.ShowAbout(); };
+            g.Controls.Add(lnkAbout);
+
+            lblSaved.SetBounds(130, 172, btnCheck.Left - 140, 22);
             lblSaved.ForeColor = SystemColors.GrayText;
             g.Controls.Add(lblSaved);
             return g;
@@ -165,7 +172,7 @@ namespace UABlackoutPreWarning
             lblLegend.Text = S.Legend;
             g.Controls.Add(lblLegend);
 
-            strip.SetBounds(12, 106, Inner, 40);
+            strip.SetBounds(12, 106, Inner, 50);
             g.Controls.Add(strip);
 
             lblStatus.SetBounds(12, 150, Inner, 38);   // height and position fitted in FitLayout()
@@ -385,35 +392,59 @@ namespace UABlackoutPreWarning
             float barTop = 2 * scale;
             float barHeight = 20 * scale;
             float width = ClientSize.Width;
-            float cell = width / Slots.PerDay;
 
-            for (int i = 0; i < Slots.PerDay; i++)
+            // 24 hour blocks with a gap between hours; the two half-hours of an hour sit together.
+            float hourGap = 3 * scale;
+            float halfGap = 1 * scale;
+            float hourWidth = (width - 23 * hourGap) / 24;
+            float halfWidth = (hourWidth - halfGap) / 2;
+
+            for (int h = 0; h < 24; h++)
             {
-                var colour = slots == null ? Unknown : (slots[i] ? Off : On);
-                using (var brush = new SolidBrush(colour))
+                float x = HourLeft(h, hourWidth, hourGap);
+                for (int k = 0; k < 2; k++)
                 {
-                    g.FillRectangle(brush, i * cell, barTop, Math.Max(1F, cell - 1F), barHeight);
+                    int i = 2 * h + k;
+                    var colour = slots == null ? Unknown : (slots[i] ? Off : On);
+                    using (var brush = new SolidBrush(colour))
+                    {
+                        g.FillRectangle(brush, x + k * (halfWidth + halfGap), barTop, halfWidth, barHeight);
+                    }
                 }
             }
 
             if (now >= 0 && now <= 1)
             {
-                float x = (float)(now * width);
+                double hours = now * 24;
+                int h = Math.Min(23, (int)Math.Floor(hours));
+                float x = HourLeft(h, hourWidth, hourGap) + (float)(hours - h) * hourWidth;
                 using (var pen = new Pen(ForeColor, 2 * scale))
                 {
                     g.DrawLine(pen, x, 0, x, barTop + barHeight + 2 * scale);
                 }
             }
 
-            var hours = new[] { "00", "06", "12", "18", "24" };
-            int textTop = (int)(barTop + barHeight + 3 * scale);
-            for (int i = 0; i < hours.Length; i++)
+            // Tick and label every 2 hours, centred on the gap between hour blocks.
+            float tickTop = barTop + barHeight + 2 * scale;
+            int textTop = (int)(tickTop + 5 * scale);
+            using (var tick = new Pen(SystemColors.GrayText, 1))
             {
-                int x = (int)(i * width / 4);
-                var size = TextRenderer.MeasureText(g, hours[i], Font);
-                int left = i == 0 ? 0 : (i == hours.Length - 1 ? x - size.Width : x - size.Width / 2);
-                TextRenderer.DrawText(g, hours[i], Font, new Point(left, textTop), SystemColors.GrayText);
+                for (int t = 0; t <= 24; t += 2)
+                {
+                    float x = t == 0 ? 0 : (t == 24 ? width - 1 : HourLeft(t, hourWidth, hourGap) - hourGap / 2);
+                    g.DrawLine(tick, x, tickTop, x, tickTop + 4 * scale);
+
+                    var text = t.ToString("00", System.Globalization.CultureInfo.InvariantCulture);
+                    var size = TextRenderer.MeasureText(g, text, Font, Size.Empty, TextFormatFlags.NoPadding);
+                    int left = t == 0 ? 0 : (t == 24 ? (int)width - size.Width : (int)(x - size.Width / 2F));
+                    TextRenderer.DrawText(g, text, Font, new Point(left, textTop), ForeColor, TextFormatFlags.NoPadding);
+                }
             }
+        }
+
+        private static float HourLeft(int hour, float hourWidth, float hourGap)
+        {
+            return hour * (hourWidth + hourGap);
         }
     }
 }

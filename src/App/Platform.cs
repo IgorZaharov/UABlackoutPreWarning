@@ -145,6 +145,9 @@ namespace UABlackoutPreWarning
 
     internal static class AppInfo
     {
+        public const string AuthorUrl = "https://github.com/IgorZaharov";
+        public const string AuthorText = "github.com/IgorZaharov";
+
         public static string Version
         {
             get

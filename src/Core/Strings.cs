@@ -17,6 +17,12 @@ namespace UABlackoutPreWarning.Core
         public string MenuOpen { get; private set; }
         public string MenuCheckNow { get; private set; }
         public string MenuClose { get; private set; }
+        public string MenuAbout { get; private set; }
+        public string AboutTitle { get; private set; }
+        public string AboutDescription { get; private set; }
+        public string AuthorLabel { get; private set; }
+        public string VersionFormat { get; private set; }         // {0} = version
+        public string ButtonOk { get; private set; }
 
         public string GroupSettings { get; private set; }
         public string LabelUrl { get; private set; }
@@ -90,6 +96,13 @@ namespace UABlackoutPreWarning.Core
             s.MenuOpen = "Відкрити";
             s.MenuCheckNow = "Перевірити зараз";
             s.MenuClose = "Закрити програму";
+            s.MenuAbout = "Про програму";
+            s.AboutTitle = "Про програму";
+            s.AboutDescription = "Невелика програма для системного трею Windows. Надсилає сповіщення перед плановим " +
+                                 "відключенням світла в Україні, щоб ви встигли завершити роботу і зберегти дані на ПК без ДБЖ.";
+            s.AuthorLabel = "Автор:";
+            s.VersionFormat = "Версія {0}";
+            s.ButtonOk = "OK";
             s.GroupSettings = "Налаштування";
             s.LabelUrl = "Адреса сторінки з графіком";
             s.LabelQueue = "Черга";
@@ -143,6 +156,13 @@ namespace UABlackoutPreWarning.Core
             s.MenuOpen = "Open";
             s.MenuCheckNow = "Check now";
             s.MenuClose = "Close Application";
+            s.MenuAbout = "About";
+            s.AboutTitle = "About";
+            s.AboutDescription = "Small tool to run in Windows TaskTray and send notification balloon before planned " +
+                                 "blackout in UA to finish and save data on PC without UPS.";
+            s.AuthorLabel = "Author:";
+            s.VersionFormat = "Version {0}";
+            s.ButtonOk = "OK";
             s.GroupSettings = "Settings";
             s.LabelUrl = "Schedule page URL";
             s.LabelQueue = "Queue";

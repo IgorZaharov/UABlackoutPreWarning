@@ -37,7 +37,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 
 | ID | Requirement |
 | --- | --- |
-| F1 | Tray icon. Right-click menu: Open, Check now, Close Application. Double-click opens the window. |
+| F1 | Tray icon. Right-click menu: Open, Check now, About, Close Application. Double-click opens the window. |
 | F2 | One window: schedule URL, queue drop-down, warning lead time, refresh interval, Start with Windows. |
 | F3–F4 | Download and parse on start, then every refresh interval. |
 | F5 | Consecutive red slots form one blackout series. |
@@ -75,7 +75,8 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | `src/Core/Settings.cs` | `AppSettings` | Defaults, ranges, normalisation, queue list | Yes |
 | `src/Core/Strings.cs` | `Strings` | Ukrainian and English text, time/duration formatting | Yes |
 | `src/App/TrayContext.cs` | `TrayContext` | Tray icon, menu, timers, downloads, warnings, tooltip, sleep/resume | No |
-| `src/App/MainForm.cs` | `MainForm`, `DayStrip` | Window, validation, status area, 48-slot strip | No |
+| `src/App/MainForm.cs` | `MainForm`, `DayStrip` | Window, validation, status area, day strip (24 hour blocks, labels every 2 h) | No |
+| `src/App/AboutForm.cs` | `AboutForm` | Name, version, description, link to the author (github.com/IgorZaharov) | No |
 | `src/App/Platform.cs` | `RegistrySettingsStore`, `Autostart`, `ScheduleFetcher` | Registry, Run key, HTTP download | No |
 | `src/App/Program.cs` | `Program` | Single instance, DPI awareness, TLS 1.2, start-up | No |
 

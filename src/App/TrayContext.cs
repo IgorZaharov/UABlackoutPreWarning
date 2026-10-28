@@ -50,6 +50,7 @@ namespace UABlackoutPreWarning
 
         private AppSettings settings;
         private MainForm form;
+        private AboutForm about;
         private ParsedPage page;
         private DateTime? lastCheck;
         private DateTime? nextCheck;
@@ -79,6 +80,7 @@ namespace UABlackoutPreWarning
             open.Font = new Font(open.Font, FontStyle.Bold);
             menu.Items.Add(open);
             menu.Items.Add(new ToolStripMenuItem(S.MenuCheckNow, null, delegate { RefreshNow(); }));
+            menu.Items.Add(new ToolStripMenuItem(S.MenuAbout, null, delegate { ShowAbout(); }));
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(new ToolStripMenuItem(S.MenuClose, null, delegate { ExitApplication(); }));
 
@@ -132,6 +134,18 @@ namespace UABlackoutPreWarning
             if (!form.Visible) form.Show();
             if (form.WindowState == FormWindowState.Minimized) form.WindowState = FormWindowState.Normal;
             form.Activate();
+        }
+
+        /// <summary>Shows the About window (one at a time).</summary>
+        public void ShowAbout()
+        {
+            if (disposed) return;
+            if (about == null || about.IsDisposed)
+            {
+                about = new AboutForm(S);
+            }
+            if (!about.Visible) about.Show();
+            about.Activate();
         }
 
         /// <summary>Called by the window's Save button.</summary>
@@ -455,6 +469,7 @@ namespace UABlackoutPreWarning
                 tray.Dispose();
                 menu.Dispose();
                 if (form != null) form.Dispose();
+                if (about != null) about.Dispose();
                 invoker.Dispose();
             }
             base.Dispose(disposing);
