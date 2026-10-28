@@ -5,6 +5,8 @@ on:
     branches: [main]
     tags: ['v*']
   pull_request:
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -27,12 +29,18 @@ jobs:
           path: out/UABlackoutPreWarning.exe
           if-no-files-found: error
 
-      - name: Publish release (tags v*)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Attach zip to the release (tag v* or release published on GitHub)
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           # README links to releases/latest/download/UABlackoutPreWarning.zip - keep this file name.
+          $tag = if ('${{ github.event_name }}' -eq 'release') { '${{ github.event.release.tag_name }}' } else { '${{ github.ref_name }}' }
           Compress-Archive -Path out/UABlackoutPreWarning.exe -DestinationPath out/UABlackoutPreWarning.zip -Force
-          gh release create "${{ github.ref_name }}" out/UABlackoutPreWarning.zip --title "${{ github.ref_name }}" --generate-notes
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag out/UABlackoutPreWarning.zip --title $tag --generate-notes
+          } else {
+            gh release upload $tag out/UABlackoutPreWarning.zip --clobber
+          }
