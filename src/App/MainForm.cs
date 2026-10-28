@@ -40,6 +40,9 @@ namespace UABlackoutPreWarning
         private readonly Label lblNotice = new Label();
         private readonly ToolTip tips = new ToolTip();
         private readonly Timer savedTimer = new Timer();
+        private GroupBox settingsGroup;
+        private GroupBox statusGroup;
+        private bool hasNotice;
 
         /// <summary>When false, the close button only hides the window to the tray.</summary>
         public bool AllowClose;
@@ -61,8 +64,10 @@ namespace UABlackoutPreWarning
             KeyPreview = true;
             ClientSize = new Size(GroupWidth + 24, 486);
 
-            Controls.Add(BuildSettingsGroup(new Point(12, 8)));
-            Controls.Add(BuildStatusGroup(new Point(12, 226)));
+            settingsGroup = BuildSettingsGroup(new Point(12, 8));
+            statusGroup = BuildStatusGroup(new Point(12, 226));
+            Controls.Add(settingsGroup);
+            Controls.Add(statusGroup);
 
             AcceptButton = btnSave;
             errors.BlinkStyle = ErrorBlinkStyle.NeverBlink;
@@ -79,7 +84,7 @@ namespace UABlackoutPreWarning
 
         // ---- layout (96-DPI units; Windows scales them with AutoScaleMode.Dpi) --
 
-        private const int GroupWidth = 440;
+        private const int GroupWidth = 540;
         private const int Inner = GroupWidth - 24;   // usable width inside a group
         private const int Col2 = 152, Col3 = 292;
 
@@ -154,8 +159,8 @@ namespace UABlackoutPreWarning
             lblToday.ForeColor = SystemColors.GrayText;
             g.Controls.Add(lblToday);
 
-            lblLegend.SetBounds(12 + Inner - 200, 82, 200, 22);
-            lblLegend.TextAlign = ContentAlignment.TopRight;
+            lblLegend.AutoSize = true;                 // right-aligned to the strip in FitLayout()
+            lblLegend.Location = new Point(12 + Inner - 150, 82);
             lblLegend.ForeColor = SystemColors.GrayText;
             lblLegend.Text = S.Legend;
             g.Controls.Add(lblLegend);
@@ -167,9 +172,9 @@ namespace UABlackoutPreWarning
             lblStatus.ForeColor = SystemColors.GrayText;
             g.Controls.Add(lblStatus);
 
-            lblNotice.SetBounds(12, 190, Inner, 52);
+            lblNotice.SetBounds(12, 190, Inner, 52);   // height is fitted to the text in FitLayout()
             lblNotice.ForeColor = SystemColors.GrayText;
-            lblNotice.AutoEllipsis = true;
+            lblNotice.UseMnemonic = false;
             g.Controls.Add(lblNotice);
             return g;
         }
@@ -242,8 +247,31 @@ namespace UABlackoutPreWarning
             lblStatus.Text = v.StatusLine;
             lblStatus.ForeColor = v.StatusIsError ? OffRed : SystemColors.GrayText;
             lblNotice.Text = v.Notice ?? "";
-            lblNotice.Visible = !string.IsNullOrEmpty(v.Notice);
+            hasNotice = !string.IsNullOrEmpty(v.Notice);
+            lblNotice.Visible = hasNotice;
+            FitLayout();
             tips.SetToolTip(lblNotice, v.Notice ?? "");
+        }
+
+        /// <summary>
+        /// Right-aligns the legend with the strip and grows the site-notice label, the status
+        /// group and the window so the whole notice is visible. Uses scaled pixels (any DPI).
+        /// </summary>
+        private void FitLayout()
+        {
+            SuspendLayout();
+            lblLegend.Left = strip.Right - lblLegend.Width;
+
+            int gap = Font.Height / 2;
+            var flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.NoPadding;
+            var needed = TextRenderer.MeasureText(lblNotice.Text.Length == 0 ? " " : lblNotice.Text, lblNotice.Font,
+                new Size(strip.Width, int.MaxValue), flags);
+            lblNotice.Size = new Size(strip.Width, needed.Height + gap / 2);
+
+            int bottom = hasNotice ? lblNotice.Bottom : lblStatus.Bottom;
+            statusGroup.Height = bottom + gap + gap / 2;
+            ClientSize = new Size(ClientSize.Width, statusGroup.Bottom + settingsGroup.Top + gap / 2);
+            ResumeLayout(true);
         }
 
         private void Save()
