@@ -1,10 +1,10 @@
-# UABlackoutPreWarning — Design (as built, v1.0.0)
+# UABlackoutPreWarning — Design (as built, v1.0.1)
 
 UABlackoutPreWarning is a portable Windows tray utility. It reads the Zhytomyroblenergo (ZTOE) outage
 schedule and warns the user a set number of minutes before each scheduled blackout, so work can be
 saved on a PC without a UPS. User documentation (Ukrainian) is in [README.md](../README.md).
 
-- **Deliverable:** one `UABlackoutPreWarning.exe` (~180 KB), no installer, no files beside it.
+- **Deliverable:** one `UABlackoutPreWarning.exe` (~190 KB), no installer, no files beside it.
 - **Runs on:** clean Windows 10 (1607+) and Windows 11, x86 and x64. Needs only the .NET Framework 4.6.2+
   that ships with Windows.
 - **Licence:** GNU GPL v3.
@@ -128,7 +128,7 @@ Start with Windows writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\UA
 | --- | --- | --- |
 | `build.cmd` | Any Windows 10/11 | Builds with the built-in .NET Framework `csc.exe`, embeds icon and manifest, runs the tests |
 | `build.sh` | Linux/macOS with Mono | Development build (no manifest; DPI awareness is also set in code) and tests |
-| GitHub Actions | `windows-latest` | `build.cmd` on every push; a `v*` tag publishes a release with the exe |
+| GitHub Actions | `windows-latest` | `build.cmd` on every push; a `v*` tag or a published release gets `UABlackoutPreWarning.zip` attached |
 
 `tests/Core.Tests` is a dependency-free test runner (23 tests) covering the fixture, synthetic markup
 (no `<tbody>`, `bgcolor`, multiple days, malformed rows), planner rules, settings and strings.
