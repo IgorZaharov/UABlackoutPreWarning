@@ -13,7 +13,7 @@ namespace UABlackoutPreWarning
     /// <summary>Small About window: name, version, description and a link to the author.</summary>
     internal sealed class AboutForm : Form
     {
-        private const int Width96 = 440;
+        private const int Width96 = 480;
 
         private readonly Label lblDescription = new Label();
         private readonly Label lblAuthor = new Label();
@@ -88,6 +88,12 @@ namespace UABlackoutPreWarning
         {
             base.OnLoad(e);
             int gap = Font.Height / 2;
+
+            // Size from the window's real inner width (already DPI-scaled), so the text always wraps inside it.
+            int margin = lblDescription.Left;
+            lblDescription.Width = ClientSize.Width - 2 * margin;
+            btnOk.Left = ClientSize.Width - margin - btnOk.Width;
+
             var flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl;
             var needed = TextRenderer.MeasureText(lblDescription.Text, lblDescription.Font,
                 new Size(lblDescription.Width, int.MaxValue), flags);

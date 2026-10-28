@@ -33,6 +33,9 @@ namespace UABlackoutPreWarning.Core
         public string StartWithWindows { get; private set; }
         public string ButtonCheckNow { get; private set; }
         public string ButtonSave { get; private set; }
+        public string ButtonDefaults { get; private set; }
+        public string DefaultsHint { get; private set; }
+        public string NotSavedYet { get; private set; }
 
         public string GroupStatus { get; private set; }
         public string QueueBadge { get; private set; }            // {0} = queue
@@ -112,6 +115,9 @@ namespace UABlackoutPreWarning.Core
             s.StartWithWindows = "Запускати разом з Windows";
             s.ButtonCheckNow = "Перевірити зараз";
             s.ButtonSave = "Зберегти";
+            s.ButtonDefaults = "За замовчуванням";
+            s.DefaultsHint = "Повернути стандартні значення всіх полів. Щоб застосувати їх, натисніть «Зберегти».";
+            s.NotSavedYet = "Не збережено";
             s.GroupStatus = "Стан";
             s.QueueBadge = "Черга {0}";
             s.NextBlackout = "Наступне відключення";
@@ -172,6 +178,9 @@ namespace UABlackoutPreWarning.Core
             s.StartWithWindows = "Start with Windows";
             s.ButtonCheckNow = "Check now";
             s.ButtonSave = "Save";
+            s.ButtonDefaults = "Restore defaults";
+            s.DefaultsHint = "Put the standard values back into all fields. Press Save to apply them.";
+            s.NotSavedYet = "Not saved yet";
             s.GroupStatus = "Status";
             s.QueueBadge = "Queue {0}";
             s.NextBlackout = "Next blackout";

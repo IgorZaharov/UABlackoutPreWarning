@@ -26,6 +26,7 @@ namespace UABlackoutPreWarning
         private readonly CheckBox chkAutostart = new CheckBox();
         private readonly Button btnCheck = new Button();
         private readonly Button btnSave = new Button();
+        private readonly Button btnDefaults = new Button();
         private readonly Label lblSaved = new Label();
         private readonly LinkLabel lnkAbout = new LinkLabel();
         private readonly ErrorProvider errors = new ErrorProvider();
@@ -113,8 +114,16 @@ namespace UABlackoutPreWarning
             g.Controls.Add(Caption(S.Minutes, Col3 + 66, 95));
 
             chkAutostart.Text = S.StartWithWindows;
-            chkAutostart.SetBounds(12, 128, Inner, 22);
+            chkAutostart.SetBounds(12, 128, Inner - 170, 22);
             g.Controls.Add(chkAutostart);
+
+            // Puts the default values back into the fields; nothing is applied until Save.
+            btnDefaults.Text = S.ButtonDefaults;
+            btnDefaults.SetBounds(12 + Inner - 150, 124, 150, 28);
+            btnDefaults.UseVisualStyleBackColor = true;
+            btnDefaults.Click += delegate { RestoreDefaults(); };
+            tips.SetToolTip(btnDefaults, S.DefaultsHint);
+            g.Controls.Add(btnDefaults);
 
             btnSave.Text = S.ButtonSave;
             btnSave.SetBounds(12 + Inner - 110, 164, 110, 30);
@@ -293,6 +302,22 @@ namespace UABlackoutPreWarning
             var needed = TextRenderer.MeasureText(label.Text.Length == 0 ? " " : label.Text, label.Font,
                 new Size(width, int.MaxValue), flags);
             label.Size = new Size(width, needed.Height + extra);
+        }
+
+        private void RestoreDefaults()
+        {
+            var d = new AppSettings();
+            txtUrl.Text = d.ScheduleUrl;
+            errors.SetError(txtUrl, "");
+            if (!cmbQueue.Items.Contains(d.Queue)) cmbQueue.Items.Add(d.Queue);
+            cmbQueue.SelectedItem = d.Queue;
+            numLead.Value = Clamp(d.LeadMinutes, numLead);
+            numRefresh.Value = Clamp(d.RefreshMinutes, numRefresh);
+            chkAutostart.Checked = d.StartWithWindows;
+
+            savedTimer.Stop();
+            lblSaved.Text = S.NotSavedYet;
+            btnSave.Focus();
         }
 
         private void Save()
