@@ -20,8 +20,11 @@ namespace UABlackoutPreWarning
         private readonly LinkLabel lnkAuthor = new LinkLabel();
         private readonly Button btnOk = new Button();
 
-        public AboutForm(Strings S)
+        private Theme theme;
+
+        public AboutForm(Strings S, Theme t)
         {
+            theme = t;
             SuspendLayout();
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
@@ -51,7 +54,7 @@ namespace UABlackoutPreWarning
             var version = new Label();
             version.Text = string.Format(S.VersionFormat, AppInfo.Version);
             version.AutoSize = true;
-            version.ForeColor = SystemColors.GrayText;
+            version.Tag = Theme.RoleSub;
             version.Location = new Point(84, 46);
             Controls.Add(version);
 
@@ -78,6 +81,7 @@ namespace UABlackoutPreWarning
             Controls.Add(btnOk);
             AcceptButton = btnOk;
             CancelButton = btnOk;
+            theme.Apply(this);
 
             ResumeLayout(false);
             PerformLayout();
@@ -104,6 +108,20 @@ namespace UABlackoutPreWarning
             lnkAuthor.Left = lblAuthor.Right + gap / 2;
             btnOk.Top = lblAuthor.Bottom + gap * 2;
             ClientSize = new Size(ClientSize.Width, btnOk.Bottom + gap * 2);
+        }
+
+        public void ApplyTheme(Theme t)
+        {
+            theme = t;
+            theme.Apply(this);
+            Theme.ApplyTitleBar(this, theme.Dark);
+            Invalidate(true);
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            Theme.ApplyTitleBar(this, theme.Dark);
         }
 
         private void OpenAuthorPage()

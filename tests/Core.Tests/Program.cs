@@ -321,6 +321,7 @@ namespace UABlackoutPreWarning.Tests
             Equal(10, s.LeadMinutes, "default lead");
             Equal(30, s.RefreshMinutes, "default refresh");
             True(!s.StartWithWindows, "autostart off");
+            True(!s.DarkTheme, "light theme by default");
 
             s.ScheduleUrl = "ftp://x";
             s.Queue = "abc";

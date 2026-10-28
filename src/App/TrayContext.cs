@@ -37,6 +37,7 @@ namespace UABlackoutPreWarning
         private const int StaleAfterFailures = 3;
 
         private readonly Strings S = Strings.Current();
+        private Theme theme = Theme.LightTheme;
         private readonly RegistrySettingsStore store = new RegistrySettingsStore();
         private readonly WarningPlanner planner = new WarningPlanner();
         private readonly NotifyIcon tray;
@@ -74,6 +75,7 @@ namespace UABlackoutPreWarning
             bool firstRun;
             settings = store.Load(out firstRun);
             planner.Load(settings.NotifiedSeries);
+            theme = Theme.For(settings.DarkTheme);
 
             menu = new ContextMenuStrip();
             var open = new ToolStripMenuItem(S.MenuOpen, null, delegate { ShowWindow(); });
@@ -83,6 +85,8 @@ namespace UABlackoutPreWarning
             menu.Items.Add(new ToolStripMenuItem(S.MenuAbout, null, delegate { ShowAbout(); }));
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(new ToolStripMenuItem(S.MenuClose, null, delegate { ExitApplication(); }));
+
+            theme.ApplyMenu(menu);
 
             tray = new NotifyIcon();
             tray.Icon = AppInfo.LoadIcon(SystemInformation.SmallIconSize);
@@ -127,7 +131,7 @@ namespace UABlackoutPreWarning
             if (disposed) return;
             if (form == null || form.IsDisposed)
             {
-                form = new MainForm(S, this);
+                form = new MainForm(S, this, theme);
             }
             form.LoadSettings(settings);
             form.ShowStatus(BuildStatus(KyivClock.Now));
@@ -142,10 +146,22 @@ namespace UABlackoutPreWarning
             if (disposed) return;
             if (about == null || about.IsDisposed)
             {
-                about = new AboutForm(S);
+                about = new AboutForm(S, theme);
             }
             if (!about.Visible) about.Show();
             about.Activate();
+        }
+
+        /// <summary>Day/Night switch: applies at once and saves only this setting.</summary>
+        public void SetDarkTheme(bool dark)
+        {
+            if (settings.DarkTheme == dark) return;
+            settings.DarkTheme = dark;
+            TrySave();
+            theme = Theme.For(dark);
+            theme.ApplyMenu(menu);
+            if (form != null && !form.IsDisposed) form.ApplyTheme(theme);
+            if (about != null && !about.IsDisposed) about.ApplyTheme(theme);
         }
 
         /// <summary>Called by the window's Save button.</summary>
@@ -157,6 +173,7 @@ namespace UABlackoutPreWarning
             bool autostartChanged = updated.StartWithWindows != settings.StartWithWindows;
 
             updated.KnownQueues = settings.KnownQueues;
+            updated.DarkTheme = settings.DarkTheme;     // the Day/Night switch saves itself
             updated.NotifiedSeries = planner.Serialize();
             settings = updated;
             TrySave();

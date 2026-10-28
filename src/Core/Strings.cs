@@ -36,6 +36,8 @@ namespace UABlackoutPreWarning.Core
         public string ButtonDefaults { get; private set; }
         public string DefaultsHint { get; private set; }
         public string NotSavedYet { get; private set; }
+        public string ThemeToDark { get; private set; }
+        public string ThemeToLight { get; private set; }
 
         public string GroupStatus { get; private set; }
         public string QueueBadge { get; private set; }            // {0} = queue
@@ -118,6 +120,8 @@ namespace UABlackoutPreWarning.Core
             s.ButtonDefaults = "За замовчуванням";
             s.DefaultsHint = "Повернути стандартні значення всіх полів. Щоб застосувати їх, натисніть «Зберегти».";
             s.NotSavedYet = "Не збережено";
+            s.ThemeToDark = "Увімкнути темну тему";
+            s.ThemeToLight = "Увімкнути світлу тему";
             s.GroupStatus = "Стан";
             s.QueueBadge = "Черга {0}";
             s.NextBlackout = "Наступне відключення";
@@ -181,6 +185,8 @@ namespace UABlackoutPreWarning.Core
             s.ButtonDefaults = "Restore defaults";
             s.DefaultsHint = "Put the standard values back into all fields. Press Save to apply them.";
             s.NotSavedYet = "Not saved yet";
+            s.ThemeToDark = "Switch to dark theme";
+            s.ThemeToLight = "Switch to light theme";
             s.GroupStatus = "Status";
             s.QueueBadge = "Queue {0}";
             s.NextBlackout = "Next blackout";

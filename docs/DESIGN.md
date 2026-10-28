@@ -47,6 +47,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | F9 | Queue drop-down lists the row labels found on the page. |
 | F10 | Start with Windows via the per-user Run key. |
 | F11 | Standard Windows notification sound. |
+| F13 | Day/Night switch (sun/moon) in the window: light or dark theme, applied and saved at once without Save. |
 | F12 | UI language follows Windows: Ukrainian, otherwise English. |
 
 ## Architecture
@@ -76,6 +77,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | `src/Core/Strings.cs` | `Strings` | Ukrainian and English text, time/duration formatting | Yes |
 | `src/App/TrayContext.cs` | `TrayContext` | Tray icon, menu, timers, downloads, warnings, tooltip, sleep/resume | No |
 | `src/App/MainForm.cs` | `MainForm`, `DayStrip` | Window, validation, status area, day strip (24 hour blocks, labels every 2 h) | No |
+| `src/App/Theme.cs` | `Theme`, `ThemedGroupBox`, `ThemeToggle` | Light/dark colour sets applied in place, dark group frames, the switch, dark title bar (DWM), dark tray menu | No |
 | `src/App/AboutForm.cs` | `AboutForm` | Name, version, description, link to the author (github.com/IgorZaharov) | No |
 | `src/App/Platform.cs` | `RegistrySettingsStore`, `Autostart`, `ScheduleFetcher` | Registry, Run key, HTTP download | No |
 | `src/App/Program.cs` | `Program` | Single instance, DPI awareness, TLS 1.2, start-up | No |
@@ -115,6 +117,7 @@ already known.
 | `StartWithWindows` | REG_DWORD | 0 | Checkbox |
 | `KnownQueues` | REG_SZ | `1.1;…;6.2` | Row labels last seen on the page |
 | `NotifiedSeries` | REG_SZ | empty | Last 20 warned series |
+| `DarkTheme` | REG_DWORD | 0 | Day/Night switch; saved the moment it is clicked |
 
 Start with Windows writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\UABlackoutPreWarning`
 (the exe path in quotes) and rewrites it at every start, so a moved exe recovers after one manual launch.

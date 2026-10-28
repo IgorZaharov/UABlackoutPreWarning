@@ -29,6 +29,7 @@ namespace UABlackoutPreWarning.Core
             LeadMinutes = DefaultLeadMinutes;
             RefreshMinutes = DefaultRefreshMinutes;
             StartWithWindows = false;
+            DarkTheme = false;
             KnownQueues = string.Join(";", DefaultQueues);
             NotifiedSeries = "";
         }
@@ -38,6 +39,9 @@ namespace UABlackoutPreWarning.Core
         public int LeadMinutes { get; set; }
         public int RefreshMinutes { get; set; }
         public bool StartWithWindows { get; set; }
+
+        /// <summary>Dark colours for the window and tray menu (the Day/Night switch).</summary>
+        public bool DarkTheme { get; set; }
 
         /// <summary>Row labels last seen on the page, semicolon-separated.</summary>
         public string KnownQueues { get; set; }

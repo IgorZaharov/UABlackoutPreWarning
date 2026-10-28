@@ -32,6 +32,7 @@ namespace UABlackoutPreWarning
                     s.LeadMinutes = GetInt(key, "LeadMinutes", s.LeadMinutes);
                     s.RefreshMinutes = GetInt(key, "RefreshMinutes", s.RefreshMinutes);
                     s.StartWithWindows = GetInt(key, "StartWithWindows", 0) != 0;
+                    s.DarkTheme = GetInt(key, "DarkTheme", 0) != 0;
                     s.KnownQueues = GetString(key, "KnownQueues", s.KnownQueues);
                     s.NotifiedSeries = GetString(key, "NotifiedSeries", s.NotifiedSeries);
                 }
@@ -49,6 +50,7 @@ namespace UABlackoutPreWarning
                 key.SetValue("LeadMinutes", s.LeadMinutes, RegistryValueKind.DWord);
                 key.SetValue("RefreshMinutes", s.RefreshMinutes, RegistryValueKind.DWord);
                 key.SetValue("StartWithWindows", s.StartWithWindows ? 1 : 0, RegistryValueKind.DWord);
+                key.SetValue("DarkTheme", s.DarkTheme ? 1 : 0, RegistryValueKind.DWord);
                 key.SetValue("KnownQueues", s.KnownQueues ?? "", RegistryValueKind.String);
                 key.SetValue("NotifiedSeries", s.NotifiedSeries ?? "", RegistryValueKind.String);
             }
