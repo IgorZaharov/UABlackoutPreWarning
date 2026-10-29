@@ -101,6 +101,46 @@ namespace UABlackoutPreWarning
             Theme.ApplyTitleBar(this, T.Dark);
         }
 
+        private bool layingOutToolbar;
+
+        protected override void OnLayout(LayoutEventArgs e)
+        {
+            base.OnLayout(e);
+            LayoutToolbar();
+        }
+
+        /// <summary>
+        /// Places the toolbar row in real pixels after any DPI scaling: switch right-aligned with the
+        /// status group, "?" and gear to its left. Windows' automatic scaling moved the icon-font
+        /// buttons (they have their own font) to the wrong place at 125 %, so it is not relied on here.
+        /// </summary>
+        private void LayoutToolbar()
+        {
+            if (statusGroup == null || layingOutToolbar) return;
+            layingOutToolbar = true;
+            try
+            {
+                float s = statusGroup.Width / (float)GroupWidth;     // actual scale factor
+                int button = Scaled(ToolButton, s);
+                int top = Scaled(ToolbarTop, s);
+                var toggle = new Size(Scaled(56, s), Scaled(28, s));
+
+                themeToggle.Bounds = new Rectangle(statusGroup.Right - toggle.Width, top + (button - toggle.Height) / 2,
+                    toggle.Width, toggle.Height);
+                btnAbout.Bounds = new Rectangle(themeToggle.Left - Scaled(12, s) - button, top, button, button);
+                btnSettings.Bounds = new Rectangle(btnAbout.Left - Scaled(8, s) - button, top, button, button);
+            }
+            finally
+            {
+                layingOutToolbar = false;
+            }
+        }
+
+        private static int Scaled(int value, float scale)
+        {
+            return (int)Math.Round(value * scale);
+        }
+
         /// <summary>Right-aligned row: gear (settings), "?" (about), Day/Night switch.</summary>
         private void BuildToolbar()
         {
