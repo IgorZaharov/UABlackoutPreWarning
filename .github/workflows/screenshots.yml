@@ -1,0 +1,27 @@
+name: screenshots
+
+# Manual run: takes README screenshots of the real windows on a Windows runner
+# (UI language from the input, dark and light themes) and uploads them as an artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      culture:
+        description: UI culture
+        default: uk-UA
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Take screenshots
+        shell: cmd
+        run: tools\screenshots\shots.cmd ${{ inputs.culture }} out\screenshots
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ inputs.culture }}
+          path: out/screenshots/*.png
+          if-no-files-found: error
