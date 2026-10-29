@@ -118,6 +118,12 @@ namespace UABlackoutPreWarning
         {
             form.TopMost = true;
             form.Activate();
+            if (form is SettingsForm)
+            {
+                // The focused address box would show its whole text highlighted; not useful in a picture.
+                ClearSelection(form);
+                form.ActiveControl = null;
+            }
             form.Refresh();
             Application.DoEvents();
             Thread.Sleep(500);
@@ -135,6 +141,16 @@ namespace UABlackoutPreWarning
                 Console.WriteLine("Saved {0} ({1}x{2})", path, r.Width, r.Height);
             }
             form.TopMost = false;
+        }
+
+        private static void ClearSelection(Control parent)
+        {
+            foreach (Control c in parent.Controls)
+            {
+                var box = c as TextBox;
+                if (box != null) box.Select(0, 0);
+                ClearSelection(c);
+            }
         }
 
         // ---- native ---------------------------------------------------------------
