@@ -1,4 +1,4 @@
-# UABlackoutPreWarning — Design (as built, v1.0.1)
+# UABlackoutPreWarning — Design (as built, v1.1.0)
 
 UABlackoutPreWarning is a portable Windows tray utility. It reads the Zhytomyroblenergo (ZTOE) outage
 schedule and warns the user a set number of minutes before each scheduled blackout, so work can be
@@ -37,8 +37,8 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 
 | ID | Requirement |
 | --- | --- |
-| F1 | Tray icon. Right-click menu: Open, Check now, About, Close Application. Double-click opens the window. |
-| F2 | One window: schedule URL, queue drop-down, warning lead time, refresh interval, Start with Windows. |
+| F1 | Tray icon. Right-click menu: Open, Check now, About, Close Application. Double-click opens the main window. |
+| F2 | Main window: status, plus gear (settings), "?" (about) and the Day/Night switch. Separate settings window: schedule URL, queue drop-down, warning lead time, refresh interval, Start with Windows, Restore defaults, Check now, Save. |
 | F3–F4 | Download and parse on start, then every refresh interval. |
 | F5 | Consecutive red slots form one blackout series. |
 | F6 | One notification per series, X minutes before it starts. |
@@ -47,7 +47,8 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | F9 | Queue drop-down lists the row labels found on the page. |
 | F10 | Start with Windows via the per-user Run key. |
 | F11 | Standard Windows notification sound. |
-| F13 | Day/Night switch (sun/moon) in the window: light or dark theme, applied and saved at once without Save. |
+| F13 | Day/Night switch (sun/moon) in the main window: light or dark theme for all windows and the tray menu, applied and saved at once without Save. |
+| F14 | About window: description, version, links to the author, the manual (README) and GitHub Issues. |
 | F12 | UI language follows Windows: Ukrainian, otherwise English. |
 
 ## Architecture
@@ -76,9 +77,10 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | `src/Core/Settings.cs` | `AppSettings` | Defaults, ranges, normalisation, queue list | Yes |
 | `src/Core/Strings.cs` | `Strings` | Ukrainian and English text, time/duration formatting | Yes |
 | `src/App/TrayContext.cs` | `TrayContext` | Tray icon, menu, timers, downloads, warnings, tooltip, sleep/resume | No |
-| `src/App/MainForm.cs` | `MainForm`, `DayStrip` | Window, validation, status area, day strip (24 hour blocks, labels every 2 h) | No |
+| `src/App/MainForm.cs` | `MainForm`, `DayStrip`, `Glyphs` | Main window: toolbar (Segoe MDL2 gear and "?" icons), status area, day strip (24 hour blocks, labels every 2 h) | No |
+| `src/App/SettingsForm.cs` | `SettingsForm` | Settings window: fields, validation, Restore defaults, Save; opens over the main window, one at a time | No |
 | `src/App/Theme.cs` | `Theme`, `ThemedGroupBox`, `ThemeToggle` | Light/dark colour sets applied in place, dark group frames, the switch, dark title bar (DWM), dark tray menu | No |
-| `src/App/AboutForm.cs` | `AboutForm` | Name, version, description, link to the author (github.com/IgorZaharov) | No |
+| `src/App/AboutForm.cs` | `AboutForm` | Name, version, description, links to the author, the manual and Issues | No |
 | `src/App/Platform.cs` | `RegistrySettingsStore`, `Autostart`, `ScheduleFetcher` | Registry, Run key, HTTP download | No |
 | `src/App/Program.cs` | `Program` | Single instance, DPI awareness, TLS 1.2, start-up | No |
 

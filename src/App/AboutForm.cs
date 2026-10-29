@@ -10,7 +10,7 @@ using UABlackoutPreWarning.Core;
 
 namespace UABlackoutPreWarning
 {
-    /// <summary>Small About window: name, version, description and a link to the author.</summary>
+    /// <summary>Small About window: name, version, description, links to the author, the manual and Issues.</summary>
     internal sealed class AboutForm : Form
     {
         private const int Width96 = 480;
@@ -18,6 +18,10 @@ namespace UABlackoutPreWarning
         private readonly Label lblDescription = new Label();
         private readonly Label lblAuthor = new Label();
         private readonly LinkLabel lnkAuthor = new LinkLabel();
+        private readonly Label lblManual = new Label();
+        private readonly LinkLabel lnkManual = new LinkLabel();
+        private readonly Label lblIssues = new Label();
+        private readonly LinkLabel lnkIssues = new LinkLabel();
         private readonly Button btnOk = new Button();
 
         private Theme theme;
@@ -64,15 +68,12 @@ namespace UABlackoutPreWarning
             Controls.Add(lblDescription);
 
             lblAuthor.Text = S.AuthorLabel;
-            lblAuthor.AutoSize = true;
-            lblAuthor.Location = new Point(20, 150);
-            Controls.Add(lblAuthor);
 
-            lnkAuthor.Text = AppInfo.AuthorText;
-            lnkAuthor.AutoSize = true;
-            lnkAuthor.Location = new Point(80, 150);
-            lnkAuthor.LinkClicked += delegate { OpenAuthorPage(); };
-            Controls.Add(lnkAuthor);
+            AddLink(lblAuthor, lnkAuthor, AppInfo.AuthorText, AppInfo.AuthorUrl);
+            lblManual.Text = S.ManualLabel;
+            AddLink(lblManual, lnkManual, AppInfo.ManualText, AppInfo.ManualUrl);
+            lblIssues.Text = S.IssuesLabel;
+            AddLink(lblIssues, lnkIssues, AppInfo.IssuesText, AppInfo.IssuesUrl);
 
             btnOk.Text = S.ButtonOk;
             btnOk.SetBounds(Width96 - 20 - 96, 176, 96, 30);
@@ -103,11 +104,26 @@ namespace UABlackoutPreWarning
                 new Size(lblDescription.Width, int.MaxValue), flags);
             lblDescription.Height = needed.Height;
 
-            lblAuthor.Top = lblDescription.Bottom + gap;
-            lnkAuthor.Top = lblAuthor.Top;
-            lnkAuthor.Left = lblAuthor.Right + gap / 2;
-            btnOk.Top = lblAuthor.Bottom + gap * 2;
-            ClientSize = new Size(ClientSize.Width, btnOk.Bottom + gap * 2);
+            // Author, manual and issues rows; the links share one column after the widest caption.
+            var captions = new[] { lblAuthor, lblManual, lblIssues };
+            var links = new[] { lnkAuthor, lnkManual, lnkIssues };
+            int linkLeft = 0;
+            foreach (var c in captions) linkLeft = Math.Max(linkLeft, c.Right + gap / 2);
+            int top = lblDescription.Bottom + gap;
+            for (int i = 0; i < captions.Length; i++)
+            {
+                captions[i].Top = top;
+                links[i].Top = top;
+                links[i].Left = linkLeft;
+                top = captions[i].Bottom + (i == 0 ? gap : gap / 2);
+            }
+
+            // OK sits at the right of the last two rows when they leave room, otherwise below them.
+            int linksRight = Math.Max(lnkManual.Right, lnkIssues.Right);
+            if (linksRight + 2 * gap <= btnOk.Left) btnOk.Top = lnkIssues.Bottom - btnOk.Height;
+            else btnOk.Top = lnkIssues.Bottom + gap * 2;
+            if (btnOk.Top < lnkManual.Top) btnOk.Top = lnkIssues.Bottom + gap * 2;
+            ClientSize = new Size(ClientSize.Width, Math.Max(btnOk.Bottom, lnkIssues.Bottom) + gap * 2);
         }
 
         public void ApplyTheme(Theme t)
@@ -124,11 +140,25 @@ namespace UABlackoutPreWarning
             Theme.ApplyTitleBar(this, theme.Dark);
         }
 
-        private void OpenAuthorPage()
+        private void AddLink(Label caption, LinkLabel link, string text, string url)
+        {
+            caption.AutoSize = true;
+            caption.Location = new Point(20, 150);
+            Controls.Add(caption);
+
+            link.Text = text;
+            link.AutoSize = true;
+            link.UseMnemonic = false;
+            link.Location = new Point(80, 150);
+            link.LinkClicked += delegate { OpenPage(url); };
+            Controls.Add(link);
+        }
+
+        private void OpenPage(string url)
         {
             try
             {
-                Process.Start(AppInfo.AuthorUrl);
+                Process.Start(url);
             }
             catch (Exception ex)
             {

@@ -21,6 +21,9 @@ namespace UABlackoutPreWarning.Core
         public string AboutTitle { get; private set; }
         public string AboutDescription { get; private set; }
         public string AuthorLabel { get; private set; }
+        public string ManualLabel { get; private set; }
+        public string IssuesLabel { get; private set; }
+        public string SettingsTitle { get; private set; }
         public string VersionFormat { get; private set; }         // {0} = version
         public string ButtonOk { get; private set; }
 
@@ -106,6 +109,9 @@ namespace UABlackoutPreWarning.Core
             s.AboutDescription = "Невелика програма для системного трею Windows. Надсилає сповіщення перед плановим " +
                                  "відключенням світла в Україні, щоб ви встигли завершити роботу і зберегти дані на ПК без ДБЖ.";
             s.AuthorLabel = "Автор:";
+            s.ManualLabel = "Інструкція:";
+            s.IssuesLabel = "Повідомити про проблему:";
+            s.SettingsTitle = "Параметри";
             s.VersionFormat = "Версія {0}";
             s.ButtonOk = "OK";
             s.GroupSettings = "Налаштування";
@@ -171,6 +177,9 @@ namespace UABlackoutPreWarning.Core
             s.AboutDescription = "Small tool to run in Windows TaskTray and send notification balloon before planned " +
                                  "blackout in UA to finish and save data on PC without UPS.";
             s.AuthorLabel = "Author:";
+            s.ManualLabel = "Manual:";
+            s.IssuesLabel = "Report issues:";
+            s.SettingsTitle = "Preferences";
             s.VersionFormat = "Version {0}";
             s.ButtonOk = "OK";
             s.GroupSettings = "Settings";

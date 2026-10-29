@@ -52,6 +52,7 @@ namespace UABlackoutPreWarning
         private AppSettings settings;
         private MainForm form;
         private AboutForm about;
+        private SettingsForm settingsForm;
         private ParsedPage page;
         private DateTime? lastCheck;
         private DateTime? nextCheck;
@@ -118,6 +119,7 @@ namespace UABlackoutPreWarning
             {
                 TrySave();
                 ShowWindow();
+                ShowSettings();
             }
 
             RefreshNow();
@@ -133,11 +135,33 @@ namespace UABlackoutPreWarning
             {
                 form = new MainForm(S, this, theme);
             }
-            form.LoadSettings(settings);
             form.ShowStatus(BuildStatus(KyivClock.Now));
             if (!form.Visible) form.Show();
             if (form.WindowState == FormWindowState.Minimized) form.WindowState = FormWindowState.Normal;
             form.Activate();
+        }
+
+        /// <summary>
+        /// Shows the settings window (one at a time). An already open window keeps its unsaved edits;
+        /// a new one is filled from the saved settings and placed over the main window.
+        /// </summary>
+        public void ShowSettings()
+        {
+            if (disposed) return;
+            if (settingsForm == null || settingsForm.IsDisposed)
+            {
+                settingsForm = new SettingsForm(S, this, theme);
+                settingsForm.LoadSettings(settings);
+            }
+            if (!settingsForm.Visible)
+            {
+                var anchor = form != null && !form.IsDisposed && form.Visible ? form : null;
+                settingsForm.Owner = anchor;            // stays above the main window
+                settingsForm.PlaceOver(anchor);
+                settingsForm.Show();
+            }
+            if (settingsForm.WindowState == FormWindowState.Minimized) settingsForm.WindowState = FormWindowState.Normal;
+            settingsForm.Activate();
         }
 
         /// <summary>Shows the About window (one at a time).</summary>
@@ -161,10 +185,11 @@ namespace UABlackoutPreWarning
             theme = Theme.For(dark);
             theme.ApplyMenu(menu);
             if (form != null && !form.IsDisposed) form.ApplyTheme(theme);
+            if (settingsForm != null && !settingsForm.IsDisposed) settingsForm.ApplyTheme(theme);
             if (about != null && !about.IsDisposed) about.ApplyTheme(theme);
         }
 
-        /// <summary>Called by the window's Save button.</summary>
+        /// <summary>Called by the settings window's Save button.</summary>
         public void ApplySettings(AppSettings updated)
         {
             updated.Normalize();
@@ -277,7 +302,10 @@ namespace UABlackoutPreWarning
             if (joined == settings.KnownQueues) return;
             settings.KnownQueues = joined;
             TrySave();
-            if (form != null && !form.IsDisposed) form.UpdateQueueList(settings.KnownQueueList(), settings.Queue);
+            if (settingsForm != null && !settingsForm.IsDisposed)
+            {
+                settingsForm.UpdateQueueList(settings.KnownQueueList(), settings.Queue);
+            }
         }
 
         // ---- warnings ----------------------------------------------------------
@@ -462,6 +490,8 @@ namespace UABlackoutPreWarning
         protected override void ExitThreadCore()
         {
             TrySave();
+            if (settingsForm != null && !settingsForm.IsDisposed) settingsForm.Close();
+            if (about != null && !about.IsDisposed) about.Close();
             if (form != null && !form.IsDisposed)
             {
                 form.AllowClose = true;
@@ -487,6 +517,7 @@ namespace UABlackoutPreWarning
                 menu.Dispose();
                 if (form != null) form.Dispose();
                 if (about != null) about.Dispose();
+                if (settingsForm != null) settingsForm.Dispose();
                 invoker.Dispose();
             }
             base.Dispose(disposing);

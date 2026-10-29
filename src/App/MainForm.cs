@@ -10,25 +10,18 @@ using UABlackoutPreWarning.Core;
 
 namespace UABlackoutPreWarning
 {
-    /// <summary>The single window: settings on top, status below. Built in code (no designer files).</summary>
+    /// <summary>
+    /// The main window: a toolbar row (settings, about, Day/Night switch) and the status area.
+    /// Built in code (no designer files).
+    /// </summary>
     internal sealed class MainForm : Form
     {
         private readonly Strings S;
         private readonly TrayContext app;
         private Theme T;
         private readonly ThemeToggle themeToggle = new ThemeToggle();
-
-        private readonly TextBox txtUrl = new TextBox();
-        private readonly ComboBox cmbQueue = new ComboBox();
-        private readonly NumericUpDown numLead = new NumericUpDown();
-        private readonly NumericUpDown numRefresh = new NumericUpDown();
-        private readonly CheckBox chkAutostart = new CheckBox();
-        private readonly Button btnCheck = new Button();
-        private readonly Button btnSave = new Button();
-        private readonly Button btnDefaults = new Button();
-        private readonly Label lblSaved = new Label();
-        private readonly LinkLabel lnkAbout = new LinkLabel();
-        private readonly ErrorProvider errors = new ErrorProvider();
+        private readonly Button btnSettings = new Button();
+        private readonly Button btnAbout = new Button();
 
         private readonly Label lblCaption = new Label();
         private readonly Label lblBadge = new Label();
@@ -40,14 +33,19 @@ namespace UABlackoutPreWarning
         private readonly Label lblStatus = new Label();
         private readonly Label lblNotice = new Label();
         private readonly ToolTip tips = new ToolTip();
-        private readonly Timer savedTimer = new Timer();
-        private GroupBox settingsGroup;
         private GroupBox statusGroup;
         private bool hasNotice;
         private StatusView lastView;
 
         /// <summary>When false, the close button only hides the window to the tray.</summary>
         public bool AllowClose;
+
+        // ---- layout (96-DPI units; Windows scales them with AutoScaleMode.Dpi) --
+
+        internal const int GroupWidth = 540;
+        internal const int Inner = GroupWidth - 24;   // usable width inside a group
+        private const int Margin96 = 12;
+        private const int ToolbarTop = 8, ToolButton = 36;
 
         public MainForm(Strings strings, TrayContext context, Theme theme)
         {
@@ -65,62 +63,29 @@ namespace UABlackoutPreWarning
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
             KeyPreview = true;
-            ClientSize = new Size(GroupWidth + 24, 486);
+            ClientSize = new Size(GroupWidth + 2 * Margin96, 330);
 
-            settingsGroup = BuildSettingsGroup(new Point(12, 8));
-            statusGroup = BuildStatusGroup(new Point(12, 238));
-            Controls.Add(settingsGroup);
+            BuildToolbar();
+            statusGroup = BuildStatusGroup(new Point(Margin96, ToolbarTop + ToolButton + 4));
             Controls.Add(statusGroup);
-
-            AcceptButton = btnSave;
-            errors.BlinkStyle = ErrorBlinkStyle.NeverBlink;
-            savedTimer.Interval = 3000;
-            savedTimer.Tick += delegate
-            {
-                savedTimer.Stop();
-                lblSaved.Text = "";
-            };
 
             ApplyTheme(T);
             ResumeLayout(false);
             PerformLayout();
         }
 
-        /// <summary>Recolours the window in place; field values and unsaved edits stay as they are.</summary>
+        /// <summary>Recolours the window in place.</summary>
         public void ApplyTheme(Theme theme)
         {
             T = theme;
             SuspendLayout();
             T.Apply(this);
-            cmbQueue.DrawMode = T.Dark ? DrawMode.OwnerDrawFixed : DrawMode.Normal;
-            MatchQueueHeight();
             themeToggle.DarkMode = T.Dark;
             UpdateToggleText();
             Theme.ApplyTitleBar(this, T.Dark);
             if (lastView != null) ShowStatus(lastView);   // keeps warning colours on the status labels
             ResumeLayout(true);
             Invalidate(true);
-        }
-
-        /// <summary>
-        /// In dark mode the queue list is owner-drawn and its height follows ItemHeight;
-        /// size it so the box is exactly as tall as the two number fields beside it.
-        /// </summary>
-        private void MatchQueueHeight()
-        {
-            if (T.Dark)
-            {
-                int chrome = cmbQueue.Height - cmbQueue.ItemHeight;      // border + padding of the closed box
-                int item = numLead.Height - chrome;
-                if (item > 0 && item != cmbQueue.ItemHeight) cmbQueue.ItemHeight = item;
-            }
-            cmbQueue.Top = numLead.Top + (numLead.Height - cmbQueue.Height) / 2;
-        }
-
-        protected override void OnLoad(EventArgs e)
-        {
-            base.OnLoad(e);
-            MatchQueueHeight();   // after DPI scaling, when the final control heights are known
         }
 
         private void UpdateToggleText()
@@ -136,83 +101,48 @@ namespace UABlackoutPreWarning
             Theme.ApplyTitleBar(this, T.Dark);
         }
 
-        // ---- layout (96-DPI units; Windows scales them with AutoScaleMode.Dpi) --
-
-        private const int GroupWidth = 540;
-        private const int Inner = GroupWidth - 24;   // usable width inside a group
-        private const int Col2 = 152, Col3 = 292;
-
-        private GroupBox BuildSettingsGroup(Point at)
+        /// <summary>Right-aligned row: gear (settings), "?" (about), Day/Night switch.</summary>
+        private void BuildToolbar()
         {
-            var g = Group(S.GroupSettings, at, 222);
+            int right = Margin96 + GroupWidth;
 
-            g.Controls.Add(Caption(S.LabelUrl, 12, 26));
-
-            // Day/Night switch: applies and saves at once, independent of the Save button.
-            themeToggle.SetBounds(12 + Inner - 56, 16, 56, 28);
+            // Day/Night switch: applies and saves at once.
+            themeToggle.SetBounds(right - 56, ToolbarTop + (ToolButton - 28) / 2, 56, 28);
             themeToggle.Toggled += delegate
             {
                 UpdateToggleText();
                 app.SetDarkTheme(themeToggle.DarkMode);
             };
-            g.Controls.Add(themeToggle);
+            Controls.Add(themeToggle);
 
-            txtUrl.SetBounds(12, 52, Inner, 23);
-            g.Controls.Add(txtUrl);
+            SetupToolButton(btnAbout, Glyphs.Help, "?", S.MenuAbout, themeToggle.Left - 12 - ToolButton);
+            btnAbout.Click += delegate { app.ShowAbout(); };
+            SetupToolButton(btnSettings, Glyphs.Settings, "\u2699", S.GroupSettings, btnAbout.Left - 8 - ToolButton);
+            btnSettings.Click += delegate { app.ShowSettings(); };
+            Controls.Add(btnSettings);
+            Controls.Add(btnAbout);
+        }
 
-            g.Controls.Add(Caption(S.LabelQueue, 12, 86));
-            g.Controls.Add(Caption(S.LabelLead, Col2, 86));
-            g.Controls.Add(Caption(S.LabelRefresh, Col3, 86));
-
-            cmbQueue.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbQueue.SetBounds(12, 104, 80, 23);
-            cmbQueue.DrawItem += DrawQueueItem;
-            g.Controls.Add(cmbQueue);
-
-            SetupNumber(numLead, AppSettings.MinLead, AppSettings.MaxLead, Col2, 104);
-            SetupNumber(numRefresh, AppSettings.MinRefresh, AppSettings.MaxRefresh, Col3, 104);
-            g.Controls.Add(numLead);
-            g.Controls.Add(numRefresh);
-            g.Controls.Add(Caption(S.Minutes, Col2 + 66, 107));
-            g.Controls.Add(Caption(S.Minutes, Col3 + 66, 107));
-
-            chkAutostart.Text = S.StartWithWindows;
-            // Auto-sized so the clickable area ends where the caption ends (y +2 keeps the old
-            // vertical centre of the former 22 px box).
-            chkAutostart.AutoSize = true;
-            chkAutostart.Location = new Point(12, 142);
-            g.Controls.Add(chkAutostart);
-
-            // Puts the default values back into the fields; nothing is applied until Save.
-            btnDefaults.Text = S.ButtonDefaults;
-            btnDefaults.SetBounds(12 + Inner - 150, 136, 150, 28);
-            btnDefaults.UseVisualStyleBackColor = true;
-            btnDefaults.Click += delegate { RestoreDefaults(); };
-            tips.SetToolTip(btnDefaults, S.DefaultsHint);
-            g.Controls.Add(btnDefaults);
-
-            btnSave.Text = S.ButtonSave;
-            btnSave.SetBounds(12 + Inner - 110, 176, 110, 30);
-            btnSave.Tag = Theme.RolePrimary;
-            btnSave.UseVisualStyleBackColor = true;
-            btnSave.Click += delegate { Save(); };
-            btnCheck.Text = S.ButtonCheckNow;
-            btnCheck.SetBounds(btnSave.Left - 8 - 150, 176, 150, 30);
-            btnCheck.UseVisualStyleBackColor = true;
-            btnCheck.Click += delegate { app.RefreshNow(); };
-            g.Controls.Add(btnSave);
-            g.Controls.Add(btnCheck);
-
-            lnkAbout.Text = S.MenuAbout;
-            lnkAbout.AutoSize = true;
-            lnkAbout.Location = new Point(12, 184);
-            lnkAbout.LinkClicked += delegate { app.ShowAbout(); };
-            g.Controls.Add(lnkAbout);
-
-            lblSaved.SetBounds(130, 184, btnCheck.Left - 140, 22);
-            lblSaved.Tag = Theme.RoleSub;
-            g.Controls.Add(lblSaved);
-            return g;
+        private void SetupToolButton(Button b, string glyph, string fallback, string name, int x)
+        {
+            b.SetBounds(x, ToolbarTop, ToolButton, ToolButton);
+            var icons = Glyphs.Font(14F);
+            if (icons != null)
+            {
+                b.Font = icons;
+                b.Text = glyph;
+            }
+            else
+            {
+                b.Font = new Font("Segoe UI Symbol", 14F);
+                b.Text = fallback;
+            }
+            b.Padding = Padding.Empty;
+            b.TextAlign = ContentAlignment.MiddleCenter;
+            b.UseVisualStyleBackColor = true;
+            b.UseMnemonic = false;
+            b.AccessibleName = name;
+            tips.SetToolTip(b, name);
         }
 
         private GroupBox BuildStatusGroup(Point at)
@@ -264,7 +194,7 @@ namespace UABlackoutPreWarning
             return g;
         }
 
-        private static GroupBox Group(string title, Point at, int height)
+        internal static GroupBox Group(string title, Point at, int height)
         {
             var g = new ThemedGroupBox();
             g.Text = title;
@@ -272,7 +202,7 @@ namespace UABlackoutPreWarning
             return g;
         }
 
-        private static Label Caption(string text, int x, int y)
+        internal static Label Caption(string text, int x, int y)
         {
             var l = new Label();
             l.Text = text;
@@ -281,42 +211,7 @@ namespace UABlackoutPreWarning
             return l;
         }
 
-        private static void SetupNumber(NumericUpDown n, int min, int max, int x, int y)
-        {
-            n.Minimum = min;
-            n.Maximum = max;
-            n.TextAlign = HorizontalAlignment.Right;
-            n.SetBounds(x, y, 60, 23);
-        }
-
-        // ---- data in and out ---------------------------------------------------
-
-        public void LoadSettings(AppSettings s)
-        {
-            txtUrl.Text = s.ScheduleUrl;
-            errors.SetError(txtUrl, "");
-            SetQueueItems(s.KnownQueueList(), s.Queue);
-            numLead.Value = Clamp(s.LeadMinutes, numLead);
-            numRefresh.Value = Clamp(s.RefreshMinutes, numRefresh);
-            chkAutostart.Checked = s.StartWithWindows;
-        }
-
-        /// <summary>New row labels arrived from the site; keeps the user's current choice.</summary>
-        public void UpdateQueueList(List<string> queues, string savedQueue)
-        {
-            var current = cmbQueue.SelectedItem as string;
-            SetQueueItems(queues, string.IsNullOrEmpty(current) ? savedQueue : current);
-        }
-
-        private void SetQueueItems(List<string> queues, string selected)
-        {
-            cmbQueue.BeginUpdate();
-            cmbQueue.Items.Clear();
-            foreach (var q in queues) cmbQueue.Items.Add(q);
-            if (!string.IsNullOrEmpty(selected) && !cmbQueue.Items.Contains(selected)) cmbQueue.Items.Add(selected);
-            cmbQueue.SelectedItem = selected;
-            cmbQueue.EndUpdate();
-        }
+        // ---- status ------------------------------------------------------------
 
         public void ShowStatus(StatusView v)
         {
@@ -360,7 +255,7 @@ namespace UABlackoutPreWarning
 
             int bottom = hasNotice ? lblNotice.Bottom : lblStatus.Bottom;
             statusGroup.Height = bottom + 2 * gap;
-            ClientSize = new Size(ClientSize.Width, statusGroup.Bottom + settingsGroup.Top + gap);
+            ClientSize = new Size(ClientSize.Width, statusGroup.Bottom + btnSettings.Top + gap);
             ResumeLayout(true);
         }
 
@@ -371,62 +266,6 @@ namespace UABlackoutPreWarning
             var needed = TextRenderer.MeasureText(label.Text.Length == 0 ? " " : label.Text, label.Font,
                 new Size(width, int.MaxValue), flags);
             label.Size = new Size(width, needed.Height + extra);
-        }
-
-        /// <summary>Queue list items in dark mode (the closed box and list follow the theme).</summary>
-        private void DrawQueueItem(object sender, DrawItemEventArgs e)
-        {
-            if (e.Index < 0) return;
-            bool selected = (e.State & DrawItemState.Selected) != 0;
-            var back = selected ? T.ButtonHover : T.Input;
-            using (var b = new SolidBrush(back)) e.Graphics.FillRectangle(b, e.Bounds);
-            TextRenderer.DrawText(e.Graphics, cmbQueue.Items[e.Index].ToString(), e.Font, e.Bounds, T.InputText,
-                TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
-        }
-
-        private void RestoreDefaults()
-        {
-            var d = new AppSettings();
-            txtUrl.Text = d.ScheduleUrl;
-            errors.SetError(txtUrl, "");
-            if (!cmbQueue.Items.Contains(d.Queue)) cmbQueue.Items.Add(d.Queue);
-            cmbQueue.SelectedItem = d.Queue;
-            numLead.Value = Clamp(d.LeadMinutes, numLead);
-            numRefresh.Value = Clamp(d.RefreshMinutes, numRefresh);
-            chkAutostart.Checked = d.StartWithWindows;
-
-            savedTimer.Stop();
-            lblSaved.Text = S.NotSavedYet;
-            btnSave.Focus();
-        }
-
-        private void Save()
-        {
-            var url = txtUrl.Text.Trim();
-            if (!AppSettings.IsValidUrl(url))
-            {
-                errors.SetError(txtUrl, S.InvalidUrl);
-                txtUrl.Focus();
-                return;
-            }
-            errors.SetError(txtUrl, "");
-
-            var s = new AppSettings();
-            s.ScheduleUrl = url;
-            s.Queue = (cmbQueue.SelectedItem as string) ?? AppSettings.DefaultQueue;
-            s.LeadMinutes = (int)numLead.Value;
-            s.RefreshMinutes = (int)numRefresh.Value;
-            s.StartWithWindows = chkAutostart.Checked;
-            app.ApplySettings(s);
-
-            lblSaved.Text = S.Saved;
-            savedTimer.Stop();
-            savedTimer.Start();
-        }
-
-        private static decimal Clamp(int value, NumericUpDown n)
-        {
-            return Math.Max(n.Minimum, Math.Min(n.Maximum, value));
         }
 
         // ---- window behaviour --------------------------------------------------
@@ -455,13 +294,26 @@ namespace UABlackoutPreWarning
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                savedTimer.Dispose();
-                tips.Dispose();
-                errors.Dispose();
-            }
+            if (disposing) tips.Dispose();
             base.Dispose(disposing);
+        }
+    }
+
+    /// <summary>Toolbar icons from the Segoe MDL2 Assets font that ships with Windows 10 and 11.</summary>
+    internal static class Glyphs
+    {
+        public const string Settings = "\uE713";   // gear
+        public const string Help = "\uE897";       // question mark
+
+        private const string Family = "Segoe MDL2 Assets";
+
+        /// <summary>The icon font, or null when it is not installed (the caller then uses plain text).</summary>
+        public static Font Font(float size)
+        {
+            var f = new Font(Family, size);
+            if (string.Equals(f.Name, Family, StringComparison.OrdinalIgnoreCase)) return f;
+            f.Dispose();
+            return null;
         }
     }
 

@@ -149,6 +149,10 @@ namespace UABlackoutPreWarning
     {
         public const string AuthorUrl = "https://github.com/IgorZaharov";
         public const string AuthorText = "github.com/IgorZaharov";
+        public const string ManualUrl = "https://github.com/IgorZaharov/UABlackoutPreWarning/blob/main/README.md";
+        public const string ManualText = "github.com/…/README.md";
+        public const string IssuesUrl = "https://github.com/IgorZaharov/UABlackoutPreWarning/issues";
+        public const string IssuesText = "github.com/…/issues";
 
         public static string Version
         {
