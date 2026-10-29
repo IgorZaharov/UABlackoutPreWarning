@@ -57,6 +57,49 @@ namespace UABlackoutPreWarning
             }
         }
 
+        private const string WindowPositionValue = "MainWindowPosition";
+
+        /// <summary>Where the main window was last closed ("x,y" in screen pixels), or null.</summary>
+        public Point? LoadWindowPosition()
+        {
+            try
+            {
+                using (var key = Registry.CurrentUser.OpenSubKey(KeyPath))
+                {
+                    var text = key == null ? null : key.GetValue(WindowPositionValue) as string;
+                    if (string.IsNullOrEmpty(text)) return null;
+                    var parts = text.Split(',');
+                    int x, y;
+                    if (parts.Length == 2 &&
+                        int.TryParse(parts[0], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out x) &&
+                        int.TryParse(parts[1], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out y))
+                    {
+                        return new Point(x, y);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
+            return null;
+        }
+
+        public void SaveWindowPosition(Point p)
+        {
+            try
+            {
+                using (var key = Registry.CurrentUser.CreateSubKey(KeyPath))
+                {
+                    key.SetValue(WindowPositionValue,
+                        p.X.ToString(System.Globalization.CultureInfo.InvariantCulture) + "," +
+                        p.Y.ToString(System.Globalization.CultureInfo.InvariantCulture), RegistryValueKind.String);
+                }
+            }
+            catch (Exception)
+            {
+            }
+        }
+
         private static string GetString(RegistryKey key, string name, string fallback)
         {
             var v = key.GetValue(name) as string;

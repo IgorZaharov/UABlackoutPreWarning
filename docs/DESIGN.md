@@ -1,4 +1,4 @@
-# UABlackoutPreWarning — Design (as built, v1.3.2)
+# UABlackoutPreWarning — Design (as built, v1.3.4)
 
 UABlackoutPreWarning is a portable Windows tray utility. It reads the Zhytomyroblenergo (ZTOE) outage
 schedule and warns the user a set number of minutes before each scheduled blackout, so work can be
@@ -124,6 +124,7 @@ already known.
 | `KnownQueues` | REG_SZ | `1.1;…;6.2` | Row labels last seen on the page |
 | `NotifiedSeries` | REG_SZ | empty | Last 20 warned series |
 | `DarkTheme` | REG_DWORD | 0 | Day/Night switch; saved the moment it is clicked |
+| `MainWindowPosition` | REG_SZ | not set | "x,y" of the main window when it was last closed; ignored if no longer on any screen |
 
 Start with Windows writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\UABlackoutPreWarning`
 (the exe path in quotes) and rewrites it at every start, so a moved exe recovers after one manual launch.

@@ -139,11 +139,39 @@ namespace UABlackoutPreWarning
             {
                 form = new MainForm(S, this, theme);
                 form.FormClosed += delegate { RequestTrim(); };
+                RestoreWindowPosition(form);
+                var closing = form;
+                closing.FormClosing += delegate
+                {
+                    var bounds = closing.WindowState == FormWindowState.Normal ? closing.Bounds : closing.RestoreBounds;
+                    store.SaveWindowPosition(bounds.Location);
+                };
             }
             form.ShowStatus(BuildStatus(KyivClock.Now));
             if (!form.Visible) form.Show();
             if (form.WindowState == FormWindowState.Minimized) form.WindowState = FormWindowState.Normal;
             form.Activate();
+        }
+
+        /// <summary>
+        /// Opens the main window where it was last closed, if that place is still on a screen
+        /// (a monitor may have been disconnected); otherwise it opens centred.
+        /// </summary>
+        private void RestoreWindowPosition(Form f)
+        {
+            var saved = store.LoadWindowPosition();
+            if (!saved.HasValue) return;
+            // The title bar must be reachable: its top-left 120 x 30 px has to be inside a screen's working area.
+            var grip = new Rectangle(saved.Value.X + 20, saved.Value.Y, 120, 30);
+            foreach (var screen in Screen.AllScreens)
+            {
+                if (screen.WorkingArea.Contains(grip))
+                {
+                    f.StartPosition = FormStartPosition.Manual;
+                    f.Location = saved.Value;
+                    return;
+                }
+            }
         }
 
         /// <summary>

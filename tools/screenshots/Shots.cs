@@ -86,6 +86,11 @@ namespace UABlackoutPreWarning
         /// <summary>Memory probe: start, 20 test notifications, windows opened and closed, idle.</summary>
         private static void MemorySteps(List<KeyValuePair<int, MethodInvoker>> steps)
         {
+            // Window position is remembered between close and open.
+            steps.Add(Step(3, delegate { CloseOthers(); app.ShowWindow(); Find<MainForm>().Location = new Point(130, 70); }));
+            steps.Add(Step(1, delegate { Find<MainForm>().Close(); }));
+            steps.Add(Step(1, delegate { app.ShowWindow(); Console.WriteLine("POS reopened at {0} (expected 130,70)", Find<MainForm>().Location); }));
+            steps.Add(Step(1, delegate { Find<MainForm>().Close(); }));
             steps.Add(Step(20, delegate { LogMemory("started, schedule loaded, no window"); }));
             for (int i = 0; i < 20; i++)
             {
