@@ -1,4 +1,4 @@
-# UABlackoutPreWarning — Design (as built, v1.2.0)
+# UABlackoutPreWarning — Design (as built, v1.3.0)
 
 UABlackoutPreWarning is a portable Windows tray utility. It reads the Zhytomyroblenergo (ZTOE) outage
 schedule and warns the user a set number of minutes before each scheduled blackout, so work can be
@@ -47,7 +47,8 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | F8 | All settings saved in the registry (HKCU) on Save and restored at start-up. |
 | F9 | Queue drop-down lists the row labels found on the page. |
 | F10 | Start with Windows via the per-user Run key. |
-| F11 | Standard Windows notification sound. The blackout warning is a toast in the reminder scenario: it stays on screen until dismissed and is kept in the Notifications panel. |
+| F11 | Standard Windows notification sound. Each warning shows the tray balloon and a toast; the toast uses the reminder scenario (stays on screen until dismissed) and is kept in the Notifications panel. |
+| F15 | "Test notification" in the settings window: the same notification for the nearest blackout in the saved queue, marked "Тест:", not remembered (NotifiedSeries unchanged). |
 | F13 | Day/Night switch (sun/moon) in the main window: light or dark theme for all windows and the tray menu, applied and saved at once without Save. |
 | F14 | About window: description, version, links to the author, the manual (README) and GitHub Issues. |
 | F12 | UI language follows Windows: Ukrainian, otherwise English. |
