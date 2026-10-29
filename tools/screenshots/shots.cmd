@@ -18,4 +18,4 @@ set "CULTURE=%~1"
 if "%CULTURE%"=="" set "CULTURE=uk-UA"
 set "OUTDIR=%~2"
 if "%OUTDIR%"=="" set "OUTDIR=out\screenshots"
-out\Shots.exe %CULTURE% "%OUTDIR%"
+out\Shots.exe %CULTURE% "%OUTDIR%" %3

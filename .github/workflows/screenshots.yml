@@ -8,6 +8,9 @@ on:
       culture:
         description: UI culture
         default: uk-UA
+      mode:
+        description: "'memory' runs the memory probe instead of screenshots"
+        default: ''
 
 permissions:
   contents: write
@@ -20,14 +23,14 @@ jobs:
 
       - name: Take screenshots
         shell: cmd
-        run: tools\screenshots\shots.cmd ${{ inputs.culture }} out\screenshots
+        run: tools\screenshots\shots.cmd ${{ inputs.culture }} out\screenshots ${{ inputs.mode }}
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4
         with:
           name: screenshots-${{ inputs.culture }}
           path: out/screenshots/*.png
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Commit screenshots to the 'screenshots' branch (for review before they go into docs/images)
         shell: pwsh

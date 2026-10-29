@@ -50,6 +50,11 @@ namespace UABlackoutPreWarning
 
             // (seconds to wait before the step, step)
             var steps = new List<KeyValuePair<int, MethodInvoker>>();
+            if (args.Length > 2 && args[2] == "memory")
+            {
+                MemorySteps(steps);
+                return Run(steps);
+            }
             steps.Add(Step(1, delegate { CloseOthers(); app.SetDarkTheme(true); app.ShowWindow(); }));
             steps.Add(Step(25, delegate { Save(Find<MainForm>(), "main-window-dark"); }));     // time for the download
             steps.Add(Step(1, delegate { app.ShowSettings(); }));
@@ -73,7 +78,42 @@ namespace UABlackoutPreWarning
             steps.Add(Step(1, delegate { PressWinN(); }));
             steps.Add(Step(3, delegate { SaveScreen("notification-center"); }));
             steps.Add(Step(1, delegate { app.ExitApplication(); }));
+            return Run(steps);
+        }
 
+        /// <summary>Memory probe: start, 20 test notifications, windows opened and closed, idle.</summary>
+        private static void MemorySteps(List<KeyValuePair<int, MethodInvoker>> steps)
+        {
+            steps.Add(Step(20, delegate { LogMemory("started, schedule loaded, no window"); }));
+            for (int i = 0; i < 20; i++)
+            {
+                int n = i;
+                steps.Add(Step(1, delegate { app.SendTestNotification(); if (n == 0) LogMemory("after 1st test notification"); }));
+            }
+            steps.Add(Step(2, delegate { LogMemory("after 20 test notifications"); }));
+            for (int i = 0; i < 5; i++)
+            {
+                steps.Add(Step(1, delegate { app.ShowWindow(); app.ShowSettings(); app.ShowAbout(); }));
+                steps.Add(Step(1, delegate { CloseOthers(); Find<MainForm>().Close(); }));
+            }
+            steps.Add(Step(2, delegate { LogMemory("after opening/closing windows 5 times"); }));
+            steps.Add(Step(30, delegate { LogMemory("idle 30 s"); }));
+            steps.Add(Step(30, delegate { LogMemory("idle 60 s"); }));
+            steps.Add(Step(1, delegate { app.ExitApplication(); }));
+        }
+
+        private static void LogMemory(string label)
+        {
+            using (var p = System.Diagnostics.Process.GetCurrentProcess())
+            {
+                p.Refresh();
+                Console.WriteLine("MEM {0,-45} working set {1,6:F1} MB | private {2,6:F1} MB | managed heap {3,6:F1} MB",
+                    label, p.WorkingSet64 / 1048576.0, p.PrivateMemorySize64 / 1048576.0, GC.GetTotalMemory(false) / 1048576.0);
+            }
+        }
+
+        private static int Run(List<KeyValuePair<int, MethodInvoker>> steps)
+        {
             int index = 0;
             var timer = new System.Windows.Forms.Timer();
             timer.Interval = steps[0].Key * 1000;
