@@ -177,7 +177,10 @@ namespace UABlackoutPreWarning
             g.Controls.Add(Caption(S.Minutes, Col3 + 66, 107));
 
             chkAutostart.Text = S.StartWithWindows;
-            chkAutostart.SetBounds(12, 140, Inner - 170, 22);
+            // Auto-sized so the clickable area ends where the caption ends (y +2 keeps the old
+            // vertical centre of the former 22 px box).
+            chkAutostart.AutoSize = true;
+            chkAutostart.Location = new Point(12, 142);
             g.Controls.Add(chkAutostart);
 
             // Puts the default values back into the fields; nothing is applied until Save.
