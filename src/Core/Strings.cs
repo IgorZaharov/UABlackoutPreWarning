@@ -69,6 +69,12 @@ namespace UABlackoutPreWarning.Core
         public string ToastTitle { get; private set; }            // {0} = start, {1} = minutes
         public string ToastText { get; private set; }             // {0} = end, {1} = queue
         public string StaleTitle { get; private set; }
+        public string ButtonTest { get; private set; }
+        public string TestHint { get; private set; }
+        public string TestNext { get; private set; }              // {0} = range, {1} = duration
+        public string TestNow { get; private set; }               // {0} = end
+        public string TestNone { get; private set; }
+        public string TestNoSchedule { get; private set; }
         public string StaleText { get; private set; }             // {0} = last good update or "-"
         public string TooltipNext { get; private set; }           // {0} = start-end
         public string TooltipNow { get; private set; }            // {0} = end
@@ -153,6 +159,12 @@ namespace UABlackoutPreWarning.Core
             s.ToastTitle = "Відключення о {0} (через {1} хв)";
             s.ToastText = "До {0} · черга {1}. Збережіть роботу.";
             s.StaleTitle = "Графік може бути застарілим";
+            s.ButtonTest = "Тестове сповіщення";
+            s.TestHint = "Показати сповіщення про найближче відключення у вашій черзі. Справжні попередження це не змінює.";
+            s.TestNext = "Тест: відключення {0} (через {1})";
+            s.TestNow = "Тест: світла немає до {0}";
+            s.TestNone = "Тест: відключень не заплановано";
+            s.TestNoSchedule = "Тест: графік ще не завантажено";
             s.StaleText = "Не вдається завантажити сайт. Останнє оновлення: {0}.";
             s.TooltipNext = "Наступне відключення {0}";
             s.TooltipNow = "Світла немає до {0}";
@@ -221,6 +233,12 @@ namespace UABlackoutPreWarning.Core
             s.ToastTitle = "Power off at {0} (in {1} min)";
             s.ToastText = "Until {0} · queue {1}. Save your work.";
             s.StaleTitle = "Schedule may be out of date";
+            s.ButtonTest = "Test notification";
+            s.TestHint = "Show the notification for the nearest blackout in your queue. Real warnings are not affected.";
+            s.TestNext = "Test: blackout {0} (in {1})";
+            s.TestNow = "Test: power off until {0}";
+            s.TestNone = "Test: no blackouts scheduled";
+            s.TestNoSchedule = "Test: schedule not loaded yet";
             s.StaleText = "The site cannot be reached. Last update: {0}.";
             s.TooltipNext = "Next blackout {0}";
             s.TooltipNow = "Power off until {0}";

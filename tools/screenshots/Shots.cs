@@ -66,8 +66,8 @@ namespace UABlackoutPreWarning
             steps.Add(Step(1, delegate { CloseOthers(); Find<MainForm>().Hide(); }));
             steps.Add(Step(1, delegate
             {
-                bool ok = Toasts.Show("Відключення о 12:00 (через 10 хв)", "До 15:00 · черга 5.2. Збережіть роботу.", true);
-                Console.WriteLine("Toast shown: {0} {1}", ok, Toasts.LastError);
+                app.SendTestNotification();     // toast + balloon, as the "Test notification" button does
+                Console.WriteLine("Test notification sent; toast error: {0}", Toasts.LastError ?? "none");
             }));
             steps.Add(Step(4, delegate { SaveScreen("toast-on-screen"); }));
             steps.Add(Step(1, delegate { PressWinN(); }));

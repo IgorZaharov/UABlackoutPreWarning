@@ -331,12 +331,49 @@ namespace UABlackoutPreWarning
         }
 
         /// <summary>
-        /// Windows toast (kept in the Notifications panel; a blackout warning stays on screen until dismissed),
-        /// or a tray balloon where toasts are unavailable. Both play the standard notification sound.
+        /// Shows both a Windows toast (kept in the Notifications panel; a blackout warning stays on screen
+        /// until dismissed) and the tray balloon. Toasts are skipped where Windows does not support them.
         /// </summary>
         private void Notify(string title, string text, ToolTipIcon icon, bool sticky)
         {
-            if (!Toasts.Show(title, text, sticky)) tray.ShowBalloonTip(15000, title, text, icon);
+            Toasts.Show(title, text, sticky);
+            tray.ShowBalloonTip(15000, title, text, icon);
+        }
+
+        /// <summary>
+        /// Settings window's "Test notification": the warning for the nearest blackout in the saved queue.
+        /// Nothing is remembered, so real warnings (NotifiedSeries) are not affected.
+        /// </summary>
+        public void SendTestNotification()
+        {
+            if (disposed) return;
+            var now = KyivClock.Now;
+            var series = CurrentSeries();
+            var current = SeriesBuilder.Current(series, now);
+            var next = SeriesBuilder.Next(series, now);
+
+            string title, text;
+            if (page == null)
+            {
+                title = S.TestNoSchedule;
+                text = error ?? S.Loading;
+            }
+            else if (next != null)
+            {
+                title = string.Format(S.TestNext, S.RangeFrom(next, now), S.Duration(next.Start - now));
+                text = string.Format(CultureInfo.InvariantCulture, S.ToastText, Strings.EndTime(next), settings.Queue);
+            }
+            else if (current != null)
+            {
+                title = string.Format(S.TestNow, Strings.EndTime(current));
+                text = string.Format(CultureInfo.InvariantCulture, S.ToastText, Strings.EndTime(current), settings.Queue);
+            }
+            else
+            {
+                title = S.TestNone;
+                text = string.Format(S.QueueBadge, settings.Queue);
+            }
+            Notify(title, text, ToolTipIcon.Warning, true);
         }
 
         private List<BlackoutSeries> CurrentSeries()

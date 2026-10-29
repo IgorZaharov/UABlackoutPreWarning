@@ -28,6 +28,7 @@ namespace UABlackoutPreWarning
         private readonly Button btnCheck = new Button();
         private readonly Button btnSave = new Button();
         private readonly Button btnDefaults = new Button();
+        private readonly Button btnTest = new Button();
         private readonly Label lblSaved = new Label();
         private readonly LinkLabel lnkAbout = new LinkLabel();
         private readonly ErrorProvider errors = new ErrorProvider();
@@ -121,8 +122,13 @@ namespace UABlackoutPreWarning
             btnCheck.Text = S.ButtonCheckNow;
             btnCheck.UseVisualStyleBackColor = true;
             btnCheck.Click += delegate { app.RefreshNow(); };
+            btnTest.Text = S.ButtonTest;
+            btnTest.UseVisualStyleBackColor = true;
+            btnTest.Click += delegate { app.SendTestNotification(); };
+            tips.SetToolTip(btnTest, S.TestHint);
             g.Controls.Add(btnSave);
             g.Controls.Add(btnCheck);
+            g.Controls.Add(btnTest);
 
             lnkAbout.Text = S.MenuAbout;
             lnkAbout.AutoSize = true;
@@ -135,9 +141,12 @@ namespace UABlackoutPreWarning
             // Rows below the checkbox: buttons on the right, About link and "Saved" on the left.
             int buttonsTop = 128 + 28 + 12;
             btnSave.SetBounds(12 + Inner - 110, buttonsTop, 110, 30);
-            btnCheck.SetBounds(btnSave.Left - 8 - 150, buttonsTop, 150, 30);
+            btnCheck.SetBounds(btnSave.Left - 8 - 140, buttonsTop, 140, 30);
+            btnTest.SetBounds(btnCheck.Left - 8 - 160, buttonsTop, 160, 30);
             lnkAbout.Location = new Point(12, buttonsTop + 8);
-            lblSaved.SetBounds(130, buttonsTop + 8, btnCheck.Left - 140, 22);
+            // "Saved" / "Not saved yet": right-aligned in the gap between the checkbox and Restore defaults.
+            lblSaved.SetBounds(212, 130, btnDefaults.Left - 8 - 212, 24);
+            lblSaved.TextAlign = ContentAlignment.MiddleRight;
             g.Height = buttonsTop + 30 + 16;
             ClientSize = new Size(ClientSize.Width, at.Y + g.Height + 12);
             return g;
