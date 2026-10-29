@@ -3,6 +3,7 @@
 // Licensed under the GNU General Public License v3.0 or later. See LICENSE.
 
 using System;
+using System.Runtime.InteropServices;
 using System.Drawing;
 using System.IO;
 using System.Net;
@@ -142,6 +143,36 @@ namespace UABlackoutPreWarning
             }
             if (text.Length > 120) text = text.Substring(0, 117) + "...";
             return text;
+        }
+    }
+
+    /// <summary>
+    /// Gives memory back to Windows when the app is idle in the tray. .NET keeps freed memory and Windows
+    /// keeps the pages of loaded components in the process until asked, so Task Manager would otherwise
+    /// show the peak (for example after the first notification) until the app is restarted.
+    /// </summary>
+    internal static class MemoryTrim
+    {
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr GetCurrentProcess();
+
+        [DllImport("kernel32.dll")]
+        private static extern bool SetProcessWorkingSetSize(IntPtr process, IntPtr minimum, IntPtr maximum);
+
+        public static void Run()
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            if (Environment.OSVersion.Platform != PlatformID.Win32NT) return;
+            try
+            {
+                // (-1, -1) = remove as many pages as possible from the working set; they come back on use.
+                SetProcessWorkingSetSize(GetCurrentProcess(), new IntPtr(-1), new IntPtr(-1));
+            }
+            catch (EntryPointNotFoundException)
+            {
+            }
         }
     }
 

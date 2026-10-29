@@ -45,6 +45,7 @@ namespace UABlackoutPreWarning
         private readonly System.Windows.Forms.Timer warnTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer refreshTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer retryTimer = new System.Windows.Forms.Timer();
+        private readonly System.Windows.Forms.Timer trimTimer = new System.Windows.Forms.Timer();
         private readonly Control invoker = new Control();
         private readonly TaskScheduler uiScheduler;
         private readonly RegisteredWaitHandle showWait;
@@ -101,6 +102,9 @@ namespace UABlackoutPreWarning
             warnTimer.Tick += delegate { Evaluate(); };
             warnTimer.Start();
 
+            trimTimer.Interval = 5000;
+            trimTimer.Tick += delegate { trimTimer.Stop(); TrimIfIdle(); };
+
             refreshTimer.Tick += delegate { RefreshNow(); };
             retryTimer.Tick += delegate { retryTimer.Stop(); RefreshNow(); };
             RestartRefreshTimer();
@@ -134,6 +138,7 @@ namespace UABlackoutPreWarning
             if (form == null || form.IsDisposed)
             {
                 form = new MainForm(S, this, theme);
+                form.FormClosed += delegate { RequestTrim(); };
             }
             form.ShowStatus(BuildStatus(KyivClock.Now));
             if (!form.Visible) form.Show();
@@ -151,6 +156,7 @@ namespace UABlackoutPreWarning
             if (settingsForm == null || settingsForm.IsDisposed)
             {
                 settingsForm = new SettingsForm(S, this, theme);
+                settingsForm.FormClosed += delegate { RequestTrim(); };
                 settingsForm.LoadSettings(settings);
             }
             if (!settingsForm.Visible)
@@ -171,6 +177,7 @@ namespace UABlackoutPreWarning
             if (about == null || about.IsDisposed)
             {
                 about = new AboutForm(S, theme);
+                about.FormClosed += delegate { RequestTrim(); };
             }
             if (!about.Visible) about.Show();
             about.Activate();
@@ -285,6 +292,7 @@ namespace UABlackoutPreWarning
             }
 
             Evaluate();
+            RequestTrim();
         }
 
         private void RestartRefreshTimer()
@@ -338,6 +346,29 @@ namespace UABlackoutPreWarning
         {
             Toasts.Show(title, text, sticky);
             tray.ShowBalloonTip(15000, title, text, icon);
+            RequestTrim();
+        }
+
+        // ---- memory ------------------------------------------------------------
+
+        /// <summary>Returns memory to Windows a few seconds after a download, a notification or a closed window.</summary>
+        private void RequestTrim()
+        {
+            if (disposed) return;
+            trimTimer.Stop();
+            trimTimer.Start();
+        }
+
+        /// <summary>Only while nothing is on screen; closing the last window asks again.</summary>
+        private void TrimIfIdle()
+        {
+            if (disposed || IsOpen(form) || IsOpen(settingsForm) || IsOpen(about)) return;
+            MemoryTrim.Run();
+        }
+
+        private static bool IsOpen(Form f)
+        {
+            return f != null && !f.IsDisposed && f.Visible;
         }
 
         /// <summary>
@@ -540,7 +571,6 @@ namespace UABlackoutPreWarning
             if (about != null && !about.IsDisposed) about.Close();
             if (form != null && !form.IsDisposed)
             {
-                form.AllowClose = true;
                 form.Close();
             }
             tray.Visible = false;
@@ -558,6 +588,7 @@ namespace UABlackoutPreWarning
                 warnTimer.Dispose();
                 refreshTimer.Dispose();
                 retryTimer.Dispose();
+                trimTimer.Dispose();
                 tray.Visible = false;
                 tray.Dispose();
                 menu.Dispose();

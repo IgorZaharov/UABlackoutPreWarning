@@ -69,10 +69,20 @@ namespace UABlackoutPreWarning
                 }
                 xml.Append("</toast>");
 
-                var doc = Activator.CreateInstance(xmlType);
-                xmlType.GetMethod("LoadXml", new[] { typeof(string) }).Invoke(doc, new object[] { xml.ToString() });
-                var toast = Activator.CreateInstance(toastType, doc);
-                notifierType.GetMethod("Show").Invoke(notifier, new[] { toast });
+                object doc = null, toast = null;
+                try
+                {
+                    doc = Activator.CreateInstance(xmlType);
+                    xmlType.GetMethod("LoadXml", new[] { typeof(string) }).Invoke(doc, new object[] { xml.ToString() });
+                    toast = Activator.CreateInstance(toastType, doc);
+                    notifierType.GetMethod("Show").Invoke(notifier, new[] { toast });
+                }
+                finally
+                {
+                    // Windows keeps its own reference to a shown toast; release ours now instead of at the next GC.
+                    Release(toast);
+                    Release(doc);
+                }
                 LastError = null;
                 return true;
             }
@@ -82,6 +92,20 @@ namespace UABlackoutPreWarning
                 LastError = inner.GetType().Name + ": " + inner.Message;
                 notifier = null;      // try again from scratch next time
                 return false;
+            }
+        }
+
+        private static void Release(object o)
+        {
+            try
+            {
+                if (o != null && System.Runtime.InteropServices.Marshal.IsComObject(o))
+                {
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(o);
+                }
+            }
+            catch (Exception)
+            {
             }
         }
 

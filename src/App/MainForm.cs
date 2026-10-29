@@ -37,8 +37,6 @@ namespace UABlackoutPreWarning
         private bool hasNotice;
         private StatusView lastView;
 
-        /// <summary>When false, the close button only hides the window to the tray.</summary>
-        public bool AllowClose;
 
         // ---- layout (96-DPI units; Windows scales them with AutoScaleMode.Dpi) --
 
@@ -310,22 +308,11 @@ namespace UABlackoutPreWarning
 
         // ---- window behaviour --------------------------------------------------
 
-        protected override void OnFormClosing(FormClosingEventArgs e)
-        {
-            if (!AllowClose && e.CloseReason == CloseReason.UserClosing)
-            {
-                e.Cancel = true;
-                Hide();
-                return;
-            }
-            base.OnFormClosing(e);
-        }
-
         protected override void OnKeyDown(KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Escape)
             {
-                Hide();
+                Close();    // the app keeps running in the tray; the window is rebuilt when opened again
                 e.Handled = true;
                 return;
             }
