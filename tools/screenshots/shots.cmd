@@ -12,7 +12,7 @@ if not exist out mkdir out
   /resource:assets\app.ico,UABlackoutPreWarning.app.ico ^
   /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
   src\Core\*.cs src\App\AboutForm.cs src\App\AssemblyInfo.cs src\App\MainForm.cs src\App\Platform.cs ^
-  src\App\SettingsForm.cs src\App\Theme.cs src\App\TrayContext.cs tools\screenshots\Shots.cs
+  src\App\SettingsForm.cs src\App\Theme.cs src\App\Toasts.cs src\App\TrayContext.cs tools\screenshots\Shots.cs
 if errorlevel 1 exit /b 1
 set "CULTURE=%~1"
 if "%CULTURE%"=="" set "CULTURE=uk-UA"

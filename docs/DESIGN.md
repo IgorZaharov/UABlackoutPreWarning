@@ -1,10 +1,11 @@
-# UABlackoutPreWarning — Design (as built, v1.1.0)
+# UABlackoutPreWarning — Design (as built, v1.2.0)
 
 UABlackoutPreWarning is a portable Windows tray utility. It reads the Zhytomyroblenergo (ZTOE) outage
 schedule and warns the user a set number of minutes before each scheduled blackout, so work can be
 saved on a PC without a UPS. User documentation (Ukrainian) is in [README.md](../README.md).
 
-- **Deliverable:** one `UABlackoutPreWarning.exe` (~190 KB), no installer, no files beside it.
+- **Deliverable:** one `UABlackoutPreWarning.exe` (~200 KB), no installer, no files beside it. At run time it
+  writes only the registry and one toast icon (`%LOCALAPPDATA%\UABlackoutPreWarning\toast-icon.png`).
 - **Runs on:** clean Windows 10 (1607+) and Windows 11, x86 and x64. Needs only the .NET Framework 4.6.2+
   that ships with Windows.
 - **Licence:** GNU GPL v3.
@@ -46,7 +47,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | F8 | All settings saved in the registry (HKCU) on Save and restored at start-up. |
 | F9 | Queue drop-down lists the row labels found on the page. |
 | F10 | Start with Windows via the per-user Run key. |
-| F11 | Standard Windows notification sound. |
+| F11 | Standard Windows notification sound. The blackout warning is a toast in the reminder scenario: it stays on screen until dismissed and is kept in the Notifications panel. |
 | F13 | Day/Night switch (sun/moon) in the main window: light or dark theme for all windows and the tray menu, applied and saved at once without Save. |
 | F14 | About window: description, version, links to the author, the manual (README) and GitHub Issues. |
 | F12 | UI language follows Windows: Ukrainian, otherwise English. |
@@ -60,7 +61,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | --- | --- |
 | .NET Framework 4.6.2 target | Built into Windows 10 1607+ (LTSC 2016/2019 included) and all Windows 11 |
 | C# 5 language level | The compiler shipped inside Windows (`v4.0.30319\csc.exe`) can build it; no SDK needed |
-| `NotifyIcon.ShowBalloonTip` | Shown as a native toast with sound on Windows 10/11; WinRT toasts would need an installed shortcut |
+| WinRT toasts via a registry AppUserModelID | Toasts stay in the Notifications panel (tray balloons do not). A portable exe has no Start-menu shortcut, so the ID is registered under `HKCU\Software\Classes\AppUserModelId\IgorZaharov.UABlackoutPreWarning` (DisplayName, IconUri). The WinRT types are loaded by reflection (`ContentType=WindowsRuntime`), so no SDK metadata is needed to build. Falls back to `NotifyIcon.ShowBalloonTip` if toasts fail |
 | Hand-written HTML parser | No HtmlAgilityPack, so no extra DLL |
 | Registry settings | Keeps the "no auxiliary files" rule |
 | In-code string tables | No `.resx` satellite assemblies (they would be extra DLLs) |
@@ -81,6 +82,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | `src/App/SettingsForm.cs` | `SettingsForm` | Settings window: fields, validation, Restore defaults, Save; opens over the main window, one at a time | No |
 | `src/App/Theme.cs` | `Theme`, `ThemedGroupBox`, `ThemeToggle` | Light/dark colour sets applied in place, dark group frames, the switch, dark title bar (DWM), dark tray menu | No |
 | `src/App/AboutForm.cs` | `AboutForm` | Name, version, description, links to the author, the manual and Issues | No |
+| `src/App/Toasts.cs` | `Toasts` | AppUserModelID registration, toast icon file, toast XML, show via WinRT | No |
 | `src/App/Platform.cs` | `RegistrySettingsStore`, `Autostart`, `ScheduleFetcher` | Registry, Run key, HTTP download | No |
 | `src/App/Program.cs` | `Program` | Single instance, DPI awareness, TLS 1.2, start-up | No |
 

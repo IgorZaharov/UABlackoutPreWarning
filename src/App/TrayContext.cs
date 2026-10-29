@@ -271,7 +271,7 @@ namespace UABlackoutPreWarning
                     var last = page != null && page.UpdatedAt.HasValue
                         ? Strings.Time(page.UpdatedAt.Value) + " " + Strings.Date(page.UpdatedAt.Value)
                         : "-";
-                    tray.ShowBalloonTip(15000, S.StaleTitle, string.Format(S.StaleText, last), ToolTipIcon.Info);
+                    Notify(S.StaleTitle, string.Format(S.StaleText, last), ToolTipIcon.Info, false);
                 }
             }
             else
@@ -322,12 +322,21 @@ namespace UABlackoutPreWarning
             {
                 string text;
                 var title = S.Toast(due[0], settings.Queue, out text);
-                tray.ShowBalloonTip(15000, title, text, ToolTipIcon.Warning); // Windows plays its notification sound
+                Notify(title, text, ToolTipIcon.Warning, true);
                 settings.NotifiedSeries = planner.Serialize();
                 TrySave();
             }
 
             UpdateViews(now, series);
+        }
+
+        /// <summary>
+        /// Windows toast (kept in the Notifications panel; a blackout warning stays on screen until dismissed),
+        /// or a tray balloon where toasts are unavailable. Both play the standard notification sound.
+        /// </summary>
+        private void Notify(string title, string text, ToolTipIcon icon, bool sticky)
+        {
+            if (!Toasts.Show(title, text, sticky)) tray.ShowBalloonTip(15000, title, text, icon);
         }
 
         private List<BlackoutSeries> CurrentSeries()

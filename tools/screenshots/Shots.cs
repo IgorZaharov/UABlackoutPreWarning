@@ -31,6 +31,10 @@ namespace UABlackoutPreWarning
             var culture = new CultureInfo(args.Length > 0 ? args[0] : "uk-UA");
             outDir = Path.GetFullPath(args.Length > 1 ? args[1] : "screenshots");
             Directory.CreateDirectory(outDir);
+            var log = new StreamWriter(Path.Combine(outDir, "log.txt"), false, System.Text.Encoding.UTF8);
+            log.AutoFlush = true;
+            Console.SetOut(log);
+            Console.SetError(log);
 
             Thread.CurrentThread.CurrentCulture = culture;
             Thread.CurrentThread.CurrentUICulture = culture;
@@ -58,6 +62,16 @@ namespace UABlackoutPreWarning
             steps.Add(Step(3, delegate { Save(Find<SettingsForm>(), "settings-window-light"); }));
             steps.Add(Step(1, delegate { CloseOthers(); app.ShowAbout(); }));
             steps.Add(Step(3, delegate { Save(Find<AboutForm>(), "about-window-light"); }));
+            // Blackout warning as a toast: on screen, then in the Notifications panel (Win+N).
+            steps.Add(Step(1, delegate { CloseOthers(); Find<MainForm>().Hide(); }));
+            steps.Add(Step(1, delegate
+            {
+                bool ok = Toasts.Show("Відключення о 12:00 (через 10 хв)", "До 15:00 · черга 5.2. Збережіть роботу.", true);
+                Console.WriteLine("Toast shown: {0} {1}", ok, Toasts.LastError);
+            }));
+            steps.Add(Step(4, delegate { SaveScreen("toast-on-screen"); }));
+            steps.Add(Step(1, delegate { PressWinN(); }));
+            steps.Add(Step(3, delegate { SaveScreen("notification-center"); }));
             steps.Add(Step(1, delegate { app.ExitApplication(); }));
 
             int index = 0;
@@ -141,6 +155,31 @@ namespace UABlackoutPreWarning
                 Console.WriteLine("Saved {0} ({1}x{2})", path, r.Width, r.Height);
             }
             form.TopMost = false;
+        }
+
+        private static void SaveScreen(string name)
+        {
+            var r = Screen.PrimaryScreen.Bounds;
+            using (var bmp = new Bitmap(r.Width, r.Height, PixelFormat.Format32bppArgb))
+            {
+                using (var g = Graphics.FromImage(bmp)) g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+                var path = Path.Combine(outDir, name + ".png");
+                bmp.Save(path, ImageFormat.Png);
+                Console.WriteLine("Saved {0} ({1}x{2})", path, r.Width, r.Height);
+            }
+        }
+
+        [DllImport("user32.dll")]
+        private static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+
+        private static void PressWinN()
+        {
+            const byte Win = 0x5B, N = 0x4E;
+            const uint Up = 0x0002;
+            keybd_event(Win, 0, 0, UIntPtr.Zero);
+            keybd_event(N, 0, 0, UIntPtr.Zero);
+            keybd_event(N, 0, Up, UIntPtr.Zero);
+            keybd_event(Win, 0, Up, UIntPtr.Zero);
         }
 
         private static void ClearSelection(Control parent)

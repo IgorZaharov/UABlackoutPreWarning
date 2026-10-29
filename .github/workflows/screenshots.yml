@@ -36,7 +36,7 @@ jobs:
           git config user.email "41898237+github-actions[bot]@users.noreply.github.com"
           $dir = "screenshots/${{ inputs.culture }}"
           New-Item -ItemType Directory -Force $dir | Out-Null
-          Copy-Item out/screenshots/*.png $dir
+          Copy-Item out/screenshots/* $dir
           Get-ChildItem out -Recurse -File | Out-File -Encoding utf8 "$dir/files.txt"
           git checkout -B screenshots
           git add -f $dir
