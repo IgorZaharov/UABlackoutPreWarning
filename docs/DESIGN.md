@@ -1,4 +1,4 @@
-# UABlackoutPreWarning — Design (as built, v1.3.0)
+# UABlackoutPreWarning — Design (as built, v1.3.1)
 
 UABlackoutPreWarning is a portable Windows tray utility. It reads the Zhytomyroblenergo (ZTOE) outage
 schedule and warns the user a set number of minutes before each scheduled blackout, so work can be
@@ -66,6 +66,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | Hand-written HTML parser | No HtmlAgilityPack, so no extra DLL |
 | Registry settings | Keeps the "no auxiliary files" rule |
 | In-code string tables | No `.resx` satellite assemblies (they would be extra DLLs) |
+| Memory trim when idle | 5 s after a download, notification or closed window (and only with no window open): full GC and `SetProcessWorkingSetSize(-1, -1)`. Working set goes from ~65 MB to ~4–9 MB in the tray; windows are closed (not hidden) and rebuilt on open |
 | Kyiv time zone | Schedule times are converted through `FLE Standard Time`, so a PC in another zone still warns correctly |
 
 ### Components
