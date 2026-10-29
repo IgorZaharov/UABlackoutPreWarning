@@ -339,13 +339,12 @@ namespace UABlackoutPreWarning
         }
 
         /// <summary>
-        /// Shows both a Windows toast (kept in the Notifications panel; a blackout warning stays on screen
-        /// until dismissed) and the tray balloon. Toasts are skipped where Windows does not support them.
+        /// Windows toast (kept in the Notifications panel; a blackout warning stays on screen until dismissed).
+        /// The tray balloon is shown only if the toast cannot be shown.
         /// </summary>
         private void Notify(string title, string text, ToolTipIcon icon, bool sticky)
         {
-            Toasts.Show(title, text, sticky);
-            tray.ShowBalloonTip(15000, title, text, icon);
+            if (!Toasts.Show(title, text, sticky)) tray.ShowBalloonTip(15000, title, text, icon);
             RequestTrim();
         }
 
