@@ -9,6 +9,9 @@ on:
         description: UI culture
         default: uk-UA
 
+permissions:
+  contents: write
+
 jobs:
   windows:
     runs-on: windows-latest
@@ -25,3 +28,17 @@ jobs:
           name: screenshots-${{ inputs.culture }}
           path: out/screenshots/*.png
           if-no-files-found: error
+
+      - name: Commit screenshots to the 'screenshots' branch (for review before they go into docs/images)
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898237+github-actions[bot]@users.noreply.github.com"
+          $dir = "screenshots/${{ inputs.culture }}"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Copy-Item out/screenshots/*.png $dir
+          Get-ChildItem out -Recurse -File | Out-File -Encoding utf8 "$dir/files.txt"
+          git checkout -B screenshots
+          git add -f $dir
+          git commit -m "Screenshots ${{ inputs.culture }} from run ${{ github.run_id }}"
+          git push -f origin screenshots
