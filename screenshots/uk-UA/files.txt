@@ -1,0 +1,13 @@
+
+    Directory: D:\a\UABlackoutPreWarning\UABlackoutPreWarning\out
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          10/29/2026 11:35 AM         166400 Shots.exe
+
+    Directory: D:\a\UABlackoutPreWarning\UABlackoutPreWarning\out\screenshots
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---          10/29/2026 11:37 AM            759 log.txt
+

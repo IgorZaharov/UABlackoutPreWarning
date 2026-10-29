@@ -1,0 +1,7 @@
+﻿POS reopened at {X=130,Y=70} (expected 130,70)
+MEM started, schedule loaded, no window           working set    4,4 MB | private   31,2 MB | managed heap    2,2 MB
+MEM after 1st test notification                   working set   24,6 MB | private   32,4 MB | managed heap    2,4 MB
+MEM after 20 test notifications                   working set   25,0 MB | private   32,4 MB | managed heap    2,6 MB
+MEM after opening/closing windows 5 times         working set   36,6 MB | private   33,0 MB | managed heap    6,9 MB
+MEM idle 30 s                                     working set    3,7 MB | private   33,0 MB | managed heap    2,2 MB
+MEM idle 60 s                                     working set    8,8 MB | private   32,9 MB | managed heap    2,2 MB
