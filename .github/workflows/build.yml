@@ -12,6 +12,12 @@ on:
 permissions:
   contents: write
 
+# Publishing a release fires two runs for the same tag (tag push + release published). Run them one
+# after the other so they do not replace the zip at the same moment; the second just re-uploads it.
+concurrency:
+  group: build-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   windows:
     runs-on: windows-latest
