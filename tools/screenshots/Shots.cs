@@ -59,6 +59,8 @@ namespace UABlackoutPreWarning
             steps.Add(Step(25, delegate { Save(Find<MainForm>(), "main-window-dark"); }));     // time for the download
             steps.Add(Step(1, delegate { app.ShowSettings(); }));
             steps.Add(Step(3, delegate { Save(Find<SettingsForm>(), "settings-window-dark"); }));
+            steps.Add(Step(1, delegate { Find<SettingsForm>().AcceptButton.PerformClick(); }));     // Save
+            steps.Add(Step(1, delegate { Save(Find<SettingsForm>(), "settings-saved-dark"); }));
             steps.Add(Step(1, delegate { CloseOthers(); app.ShowAbout(); }));
             steps.Add(Step(3, delegate { Save(Find<AboutForm>(), "about-window-dark"); }));
             steps.Add(Step(1, delegate { CloseOthers(); app.SetDarkTheme(false); app.ShowWindow(); }));

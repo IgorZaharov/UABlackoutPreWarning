@@ -144,9 +144,11 @@ namespace UABlackoutPreWarning
             btnCheck.SetBounds(btnSave.Left - 8 - 140, buttonsTop, 140, 30);
             btnTest.SetBounds(btnCheck.Left - 8 - 160, buttonsTop, 160, 30);
             lnkAbout.Location = new Point(12, buttonsTop + 8);
-            // "Saved" / "Not saved yet": right-aligned in the gap between the checkbox and Restore defaults.
-            lblSaved.SetBounds(212, 130, btnDefaults.Left - 8 - 212, 24);
+            // "Saved" / "Not saved yet": right-aligned in the gap between the checkbox and Restore defaults;
+            // the final position is set in PlaceSavedLabel() from the real (scaled) control positions.
+            lblSaved.SetBounds(212, 130, 150, 24);
             lblSaved.TextAlign = ContentAlignment.MiddleRight;
+            lblSaved.AutoEllipsis = true;
             g.Height = buttonsTop + 30 + 16;
             ClientSize = new Size(ClientSize.Width, at.Y + g.Height + 12);
             return g;
@@ -185,6 +187,26 @@ namespace UABlackoutPreWarning
         {
             base.OnLoad(e);
             MatchQueueHeight();   // after DPI scaling, when the final control heights are known
+            PlaceSavedLabel();
+        }
+
+        /// <summary>
+        /// Puts the "Saved" label in the gap between the checkbox and Restore defaults, in real pixels,
+        /// so it is never under the button whatever the display scaling.
+        /// </summary>
+        private void PlaceSavedLabel()
+        {
+            int gap = Font.Height / 2;
+            int left = chkAutostart.Right + gap;
+            int width = Math.Max(0, btnDefaults.Left - gap - left);
+            lblSaved.Bounds = new Rectangle(left, btnDefaults.Top, width, btnDefaults.Height);
+            lblSaved.BringToFront();
+        }
+
+        private void ShowSavedText(string text)
+        {
+            PlaceSavedLabel();
+            lblSaved.Text = text;
         }
 
         /// <summary>
@@ -255,7 +277,7 @@ namespace UABlackoutPreWarning
             chkAutostart.Checked = d.StartWithWindows;
 
             savedTimer.Stop();
-            lblSaved.Text = S.NotSavedYet;
+            ShowSavedText(S.NotSavedYet);
             btnSave.Focus();
         }
 
@@ -278,7 +300,7 @@ namespace UABlackoutPreWarning
             s.StartWithWindows = chkAutostart.Checked;
             app.ApplySettings(s);
 
-            lblSaved.Text = S.Saved;
+            ShowSavedText(S.Saved);
             savedTimer.Stop();
             savedTimer.Start();
         }
