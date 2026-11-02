@@ -1,7 +1,8 @@
 # CLAUDE.md - UABlackoutPreWarning
 
 Handoff and working notes for Claude (Claude Code or claude.ai). Read this first, then `docs/DESIGN.md`.
-Owner: Igor Zakharov (GitHub `IgorZaharov`). Last updated 2026-11-02, latest release **v1.3.4**.
+Owner: Igor Zakharov (GitHub `IgorZaharov`). Last updated 2026-11-03, latest release **v1.3.4**
+(`main` is at 1.3.5, not yet released).
 
 ## 1. Goal
 
@@ -80,6 +81,10 @@ Registry values (`HKCU\Software\UABlackoutPreWarning`): `ScheduleUrl`, `Queue`, 
 ## 4. Build, test, release
 
 - Windows: `build.cmd` -> `out\UABlackoutPreWarning.exe` and runs the tests.
+- Tests: `src/Core/` only (it references `System`/`System.Core` only, so keep UI, registry and HTTP out of it).
+  The runner has no per-test filter; it runs every `Run("name", Method)` in `Main`. Re-run without rebuilding:
+  `out\Core.Tests.exe tests\Fixtures`. `tests/Fixtures/*.html` are raw cp1251 captures: never re-encode them.
+- Files: UTF-8, CRLF, 4-space indent (`.editorconfig`); `.sh` uses LF.
 - Linux/macOS dev build: `build.sh` (Mono `mcs -langversion:5 -sdk:4.6.2-api`). Mono previews do **not** look
   like Windows (number boxes render empty, no MDL2 icons); use the `screenshots` workflow for real pictures.
 - **Version**: bump all three attributes in `src/App/AssemblyInfo.cs` (`1.x.y.0` / `1.x.y`) and push to
@@ -124,6 +129,7 @@ Registry values (`HKCU\Software\UABlackoutPreWarning`): `ScheduleUrl`, `Queue`, 
 | 1.3.2 | Only the toast; balloon only as fallback |
 | 1.3.3 | "Saved" label placed from real positions (was hidden behind Restore defaults); CI concurrency fix |
 | 1.3.4 | Main window reopens where it was last closed (`MainWindowPosition`, centred if off-screen) |
+| 1.3.5 | Accessibility fixes from a UI review: Queue/minute fields named for screen readers; invalid URL error shown as text under the field (was an ErrorProvider icon); dark day-strip red `#F25F55` (3.5:1 against grey). Not yet checked on Igor's PC at 125 % |
 
 ## 7. Open items
 
@@ -139,6 +145,10 @@ Registry values (`HKCU\Software\UABlackoutPreWarning`): `ScheduleUrl`, `Queue`, 
    - Glyph-only buttons: Segoe Fluent Icons (Win11) / Segoe MDL2 Assets (Win10) without borders, with hover/
      pressed fills; font Segoe UI Variable on Win11, Segoe UI on Win10.
    - Must stay single exe, C# 5, .NET 4.6.2 - no WinUI/WPF. Make a mockup first and ask Igor to confirm.
+   - A UI review (2026-11-02) also found, still open: light theme uses classic `#F0F0F0` + 3D borders while
+     dark is flat (two styles); one GroupBox frame per window that groups nothing; one screen named
+     "Параметри" and "Налаштування"; "Збережено" not announced to screen readers; day strip has no
+     accessible text; "За замовчуванням" / "Тестове сповіщення" are not verbs; light links are `#0000FF`.
 2. Optional, never requested: code signing (Azure Trusted Signing) to stop SmartScreen/Chrome download
    warnings for the unsigned exe.
 3. Optional: clicking a toast does not open the app window (would need a COM activator / protocol).
