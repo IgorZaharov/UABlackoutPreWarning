@@ -4,7 +4,7 @@
 
 # UA Blackout Pre-Warning
 
-### [Завантажити останню версію (UABlackoutPreWarning.zip)](https://github.com/IgorZaharov/UABlackoutPreWarning/releases/latest/download/UABlackoutPreWarning.zip)
+### [Завантажити останню версію (UABlackoutPreWarning.exe)](https://github.com/IgorZaharov/UABlackoutPreWarning/releases/latest/download/UABlackoutPreWarning.exe)
 
 Як завантажити і запустити - у розділі [Завантаження і запуск](#завантаження-і-запуск).
 Про проблеми можна повідомити [тут](https://github.com/IgorZaharov/UABlackoutPreWarning/issues).
@@ -34,20 +34,20 @@
 
 ## Завантаження і запуск
 
-1. Завантажте архів за посиланням [UABlackoutPreWarning.zip](https://github.com/IgorZaharov/UABlackoutPreWarning/releases/latest/download/UABlackoutPreWarning.zip).
+1. Завантажте програму за посиланням [UABlackoutPreWarning.exe](https://github.com/IgorZaharov/UABlackoutPreWarning/releases/latest/download/UABlackoutPreWarning.exe).
+   - Якщо браузер попередить, що файл завантажують рідко, виберіть **«Зберегти»** / **«Keep»**.
 2. У списку завантажень браузера натисніть значок папки **«Показати в папці»** - відкриється папка
    із завантаженим файлом.
 
    ![Показати завантажений файл у папці](docs/images/download-show-in-folder.png)
 
-3. Розблокуйте архів: клацніть по `UABlackoutPreWarning.zip` правою кнопкою миші → **«Властивості»**,
+3. Розблокуйте файл: клацніть по `UABlackoutPreWarning.exe` правою кнопкою миші → **«Властивості»**,
    поставте позначку **«Розблокувати»** (**Unblock**) і натисніть **«OK»**.
    Тоді Windows не показуватиме попередження під час запуску програми.
 
    ![Розблокувати завантажений файл](docs/images/unblock-file.png)
 
-4. Розпакуйте архів (правою кнопкою → **«Видобути все…»**) і покладіть файл `UABlackoutPreWarning.exe`
-   у зручну постійну папку, наприклад `Документи\Програми`.
+4. Перенесіть файл `UABlackoutPreWarning.exe` у зручну постійну папку, наприклад `Документи\Програми`.
 5. Запустіть `UABlackoutPreWarning.exe` подвійним клацанням.
    - Якщо Windows усе ж покаже вікно **«Windows захистила ваш ПК»**, натисніть **«Докладніше»** →
      **«Виконати в будь-якому разі»**. Це звичайне попередження для програм без цифрового підпису.

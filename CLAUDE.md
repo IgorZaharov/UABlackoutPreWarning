@@ -76,7 +76,7 @@ Windows notification per outage series, N minutes before it starts.
 | `tests/Core.Tests/Program.cs` | Dependency-free test runner, 40 tests; fixtures in `tests/Fixtures/` (saved ZTOE pages) |
 | `tools/screenshots/` | `Shots.cs` + `shots.cmd`: runs the real app for screenshots or a memory probe. Mode `windows` = window pictures only (both themes, queue help, a language switch; uses the local donations.json), safe to run on Igor's PC |
 | `tools/make_icon.py` | Generates `assets/app.ico` (crossed-out lightbulb) |
-| `.github/workflows/build.yml` | Build + tests on every push; attaches `UABlackoutPreWarning.zip` to releases |
+| `.github/workflows/build.yml` | Build + tests on every push; attaches `UABlackoutPreWarning.exe` (not zipped) to releases |
 | `.github/workflows/screenshots.yml` | Manual: inputs `culture` (default `uk-UA`) and `mode` (`''` = screenshots, `memory` = memory/position probe); force-pushes results + `log.txt` to branch `screenshots` |
 
 Registry values (`HKCU\Software\UABlackoutPreWarning`): `ScheduleUrl`, `Queue`, `LeadMinutes` (1-120),
@@ -99,9 +99,9 @@ UI layout rule since 1.4.0: windows use `AutoScaleMode.None` and place every con
 - **Version**: bump all three attributes in `src/App/AssemblyInfo.cs` (`1.x.y.0` / `1.x.y`) and push to
   `main` **before** Igor publishes the release; the tag is created from `main`'s head at publish time.
 - **Releases are published by Igor** on github.com (new tag `vX.Y.Z` on `main`). CI then attaches
-  `UABlackoutPreWarning.zip` (exe inside). Keep that asset name: the README links to
-  `releases/latest/download/UABlackoutPreWarning.zip`.
-- After Igor says "done": check that the tag points to the intended commit, both CI runs are green, the zip is
+  `UABlackoutPreWarning.exe` (not zipped since 1.5.1). Keep that asset name: the README links to
+  `releases/latest/download/UABlackoutPreWarning.exe`. Releases up to v1.5.0 have the zip; v1.4.0 also got the exe.
+- After Igor says "done": check that the tag points to the intended commit, both CI runs are green, the exe is
   attached, and the README "latest" link serves an exe with the new `FileVersion`.
 - CI has a concurrency group per tag (publishing fires a tag-push run and a release run; they used to race).
 

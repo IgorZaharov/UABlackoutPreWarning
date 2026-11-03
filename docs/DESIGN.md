@@ -149,7 +149,7 @@ Start with Windows writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\UA
 | --- | --- | --- |
 | `build.cmd` | Any Windows 10/11 | Builds with the built-in .NET Framework `csc.exe`, embeds icon and manifest, runs the tests |
 | `build.sh` | Linux/macOS with Mono | Development build (no manifest; DPI awareness is also set in code) and tests |
-| GitHub Actions | `windows-latest` | `build.cmd` on every push; a `v*` tag or a published release gets `UABlackoutPreWarning.zip` attached |
+| GitHub Actions | `windows-latest` | `build.cmd` on every push; a `v*` tag or a published release gets `UABlackoutPreWarning.exe` attached (not zipped) |
 
 `tests/Core.Tests` is a dependency-free test runner (35 tests) covering the fixture, synthetic markup
 (no `<tbody>`, `bgcolor`, multiple days, malformed rows), planner rules, settings, strings, the language

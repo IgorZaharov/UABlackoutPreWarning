@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 # Publishing a release fires two runs for the same tag (tag push + release published). Run them one
-# after the other so they do not replace the zip at the same moment; the second just re-uploads it.
+# after the other so they do not replace the exe at the same moment; the second just re-uploads it.
 concurrency:
   group: build-${{ github.event.release.tag_name || github.ref_name }}
   cancel-in-progress: false
@@ -35,19 +35,19 @@ jobs:
           path: out/UABlackoutPreWarning.exe
           if-no-files-found: error
 
-      - name: Attach zip to the release (tag v* or release published on GitHub)
+      - name: Attach the exe to the release (tag v* or release published on GitHub)
         if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'release'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # README links to releases/latest/download/UABlackoutPreWarning.zip - keep this file name.
+          # README links to releases/latest/download/UABlackoutPreWarning.exe - keep this file name.
+          # The exe is attached as it is, not zipped (a zip of v1.5.0 was flagged by Chrome).
           $PSNativeCommandUseErrorActionPreference = $false
           $tag = if ('${{ github.event_name }}' -eq 'release') { '${{ github.event.release.tag_name }}' } else { '${{ github.ref_name }}' }
-          Compress-Archive -Path out/UABlackoutPreWarning.exe -DestinationPath out/UABlackoutPreWarning.zip -Force
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag out/UABlackoutPreWarning.zip --title $tag --generate-notes
+            gh release create $tag out/UABlackoutPreWarning.exe --title $tag --generate-notes
           } else {
-            gh release upload $tag out/UABlackoutPreWarning.zip --clobber
+            gh release upload $tag out/UABlackoutPreWarning.exe --clobber
           }
