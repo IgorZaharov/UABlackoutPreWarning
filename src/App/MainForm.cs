@@ -26,7 +26,7 @@ namespace UABlackoutPreWarning
         private readonly Label lblBadge;
         private readonly FluentButton btnSettings, btnAbout;
         private readonly Panel toolbarDivider = new Panel();
-        private readonly Label moon;
+        private readonly Label themeIcon;       // sun in the light theme, moon in the dark one
         private readonly ToggleSwitch themeSwitch = new ToggleSwitch();
 
         private readonly Card statusCard = new Card();
@@ -69,13 +69,13 @@ namespace UABlackoutPreWarning
             tips.SetToolTip(btnSettings, S.SettingsTitle);
             tips.SetToolTip(btnAbout, S.MenuAbout);
             toolbarDivider.Tag = Theme.RoleDivider;
-            moon = Ui.Glyph(Ui.GlyphMoon, null);
+            themeIcon = Ui.Glyph(Ui.GlyphSun, null);
             themeSwitch.Text = S.DarkTheme;                 // read by screen readers; the switch draws only its track
             themeSwitch.FitWidth();
             themeSwitch.Checked = T.Dark;
             themeSwitch.CheckedChanged += delegate { app.SetDarkTheme(themeSwitch.Checked); };
             tips.SetToolTip(themeSwitch, S.DarkTheme);
-            Controls.AddRange(new Control[] { lblBadge, btnSettings, btnAbout, toolbarDivider, moon, themeSwitch });
+            Controls.AddRange(new Control[] { lblBadge, btnSettings, btnAbout, toolbarDivider, themeIcon, themeSwitch });
 
             // Status card.
             lblCaption = Ui.Label("", Ui.Body, Theme.RoleSub);
@@ -120,6 +120,7 @@ namespace UABlackoutPreWarning
             SuspendLayout();
             T.Apply(this);
             themeSwitch.Checked = T.Dark;
+            if (Ui.Icons != null) themeIcon.Text = T.Dark ? Ui.GlyphMoon : Ui.GlyphSun;
             T.ApplyFrame(this);
             if (lastView != null) ShowStatus(lastView);   // keeps the warning colours of the status labels
             ResumeLayout(false);
@@ -160,11 +161,11 @@ namespace UABlackoutPreWarning
             SuspendLayout();
             int margin = Ui.S(16), width = Ui.S(Width96) - 2 * margin;
 
-            // Toolbar: queue on the left; gear, "?", divider, moon and switch on the right.
+            // Toolbar: queue on the left; gear, "?", divider, sun or moon, and switch on the right.
             int top = Ui.S(8), row = Ui.S(36);
             themeSwitch.Location = new Point(margin + width - themeSwitch.Width + Ui.S(3), top + (row - themeSwitch.Height) / 2);
-            moon.Location = new Point(themeSwitch.Left - moon.Width, top + (row - moon.Height) / 2);
-            toolbarDivider.SetBounds(moon.Left - Ui.S(12), top + Ui.S(8), 1, row - Ui.S(16));
+            themeIcon.Location = new Point(themeSwitch.Left - themeIcon.Width, top + (row - themeIcon.Height) / 2);
+            toolbarDivider.SetBounds(themeIcon.Left - Ui.S(12), top + Ui.S(8), 1, row - Ui.S(16));
             btnAbout.Location = new Point(toolbarDivider.Left - Ui.S(8) - btnAbout.Width, top);
             btnSettings.Location = new Point(btnAbout.Left - Ui.S(4) - btnSettings.Width, top);
             lblBadge.Location = new Point(margin, top + (row - lblBadge.Height) / 2);

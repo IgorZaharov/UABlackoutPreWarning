@@ -50,7 +50,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | F10 | Start with Windows via the per-user Run key. |
 | F11 | Standard Windows notification sound. Each warning is a toast (the tray balloon only if the toast fails); the toast uses the reminder scenario (stays on screen until dismissed) and is kept in the Notifications panel. |
 | F15 | "Test notification" in the settings window: the same notification for the nearest blackout in the saved queue, marked "Тест:", not remembered (NotifiedSeries unchanged). |
-| F13 | Dark-theme switch (moon) in the main window: light or dark theme for all windows and the tray menu, applied and saved at once without Save. |
+| F13 | Dark-theme switch in the main window, with a sun (light) or moon (dark) glyph beside it: light or dark theme for all windows and the tray menu, applied and saved at once without Save. |
 | F14 | About window: description, version, links to the author, the manual (README) and GitHub Issues, and a section titled "Donations" (in both languages). |
 | F12 | UI language: Preferences "Мова інтерфейсу" with Як у Windows (default: Ukrainian if the Windows display language is Ukrainian, otherwise English), Українська, English. Applied on Save: the tray menu and the open windows are rebuilt in the new language at the same place. |
 | F16 | Queue row in Preferences: link "Як дізнатися свою чергу" opens a dialog with the four steps of the Android app's help. |

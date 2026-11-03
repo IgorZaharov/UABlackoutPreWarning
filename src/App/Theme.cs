@@ -296,7 +296,7 @@ namespace UABlackoutPreWarning
         /// <summary>Segoe Fluent Icons (Windows 11) or Segoe MDL2 Assets (Windows 10); null if neither exists.</summary>
         public static readonly Font Icons = PickIcons(12F);
 
-        public const string GlyphSettings = "", GlyphHelp = "", GlyphMoon = "", GlyphInfo = "",
+        public const string GlyphSettings = "", GlyphHelp = "", GlyphMoon = "", GlyphSun = "", GlyphInfo = "",
                             GlyphCalendar = "", GlyphOpen = "", GlyphChevron = "", GlyphCheck = "";
 
         public static int S(int value)
