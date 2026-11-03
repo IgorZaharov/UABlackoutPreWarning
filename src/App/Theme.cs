@@ -11,50 +11,74 @@ using System.Windows.Forms;
 namespace UABlackoutPreWarning
 {
     /// <summary>
-    /// Light and dark colour sets, applied to a window in place (unsaved edits are kept).
-    /// Light uses the normal Windows colours, so it looks exactly like a standard app.
-    /// Only documented APIs are used: control colours, flat styles, owner drawing and
-    /// the DWM dark title bar attribute.
+    /// Windows 11 light and dark colour sets (Fluent neutrals and the default accent), applied to a
+    /// window in place so unsaved edits are kept. Only documented APIs: control colours, owner drawing
+    /// and DWM window attributes.
     /// </summary>
     internal sealed class Theme
     {
-        public bool Dark;
-        public Color Window, Text, Sub, Border, Input, InputText;
-        public Color Button, ButtonBorder, ButtonHover, Primary, PrimaryText;
-        public Color Link, Warn, StripOn, StripOff, StripUnknown, Marker;
+        public bool Dark, HighContrast;
+        public Color Window, Card, CardStroke, Text, Sub, Warn, Accent, OnAccent;
+        public Color Control, ControlStroke, FieldBottom, StripOn, StripOff, StripUnknown;
 
-        /// <summary>Tag a control with one of these to pick its text colour.</summary>
-        public const string RoleSub = "sub", RoleWarn = "warn", RolePrimary = "primary";
+        /// <summary>Tag a Label (text colour) or Panel (fill) with one of these roles.</summary>
+        public const string RoleSub = "sub", RoleWarn = "warn", RoleStripOff = "strip-off", RoleStripOn = "strip-on",
+                            RoleSurface = "surface", RoleDivider = "divider";
 
         public static readonly Theme LightTheme = CreateLight();
         public static readonly Theme DarkTheme = CreateDark();
 
+        /// <summary>The light or dark set; with a Windows High Contrast theme on, the user's system colours.</summary>
         public static Theme For(bool dark)
         {
+            if (SystemInformation.HighContrast) return CreateHighContrast();
             return dark ? DarkTheme : LightTheme;
+        }
+
+        /// <summary>
+        /// Windows High Contrast: every colour comes from the user's contrast theme, every edge is drawn in
+        /// the text colour, and the accent is the system highlight.
+        /// </summary>
+        private static Theme CreateHighContrast()
+        {
+            var t = new Theme();
+            t.HighContrast = true;
+            t.Window = SystemColors.Window;
+            t.Dark = t.Window.GetBrightness() < 0.5F;
+            t.Card = SystemColors.Window;
+            t.CardStroke = SystemColors.WindowText;
+            t.Text = SystemColors.WindowText;
+            t.Sub = SystemColors.WindowText;
+            t.Warn = SystemColors.WindowText;
+            t.Accent = SystemColors.Highlight;
+            t.OnAccent = SystemColors.HighlightText;
+            t.Control = SystemColors.Window;
+            t.ControlStroke = SystemColors.WindowText;
+            t.FieldBottom = SystemColors.WindowText;
+            t.StripOn = SystemColors.Window;
+            t.StripOff = SystemColors.Highlight;
+            t.StripUnknown = SystemColors.Window;
+            return t;
         }
 
         private static Theme CreateLight()
         {
             var t = new Theme();
             t.Dark = false;
-            t.Window = SystemColors.Control;
-            t.Text = SystemColors.ControlText;
-            t.Sub = SystemColors.GrayText;
-            t.Border = SystemColors.ControlDark;
-            t.Input = SystemColors.Window;
-            t.InputText = SystemColors.WindowText;
-            t.Button = SystemColors.Control;
-            t.ButtonBorder = SystemColors.ControlDark;
-            t.ButtonHover = SystemColors.ControlLight;
-            t.Primary = SystemColors.Control;
-            t.PrimaryText = SystemColors.ControlText;
-            t.Link = Color.FromArgb(0, 0, 255);
-            t.Warn = Color.FromArgb(0xA4, 0x26, 0x2C);
-            t.StripOn = Color.FromArgb(0xE3, 0xE3, 0xE3);
-            t.StripOff = Color.FromArgb(0xC4, 0x2B, 0x1C);
-            t.StripUnknown = Color.FromArgb(0xF0, 0xF0, 0xF0);
-            t.Marker = SystemColors.ControlText;
+            t.Window = Rgb(0xF3F3F3);
+            t.Card = Rgb(0xFBFBFB);
+            t.CardStroke = Rgb(0xE5E5E5);
+            t.Text = Rgb(0x1B1B1B);
+            t.Sub = Rgb(0x616161);              // 5.6:1 on Window, 6.0:1 on Card
+            t.Warn = Rgb(0xC42B1C);
+            t.Accent = Rgb(0x005FB8);           // Windows 11 default accent for light mode
+            t.OnAccent = Color.White;
+            t.Control = Rgb(0xFFFFFF);
+            t.ControlStroke = Rgb(0xE0E0E0);
+            t.FieldBottom = Rgb(0x8A8A8A);
+            t.StripOn = Rgb(0xE3E3E3);
+            t.StripOff = Rgb(0xC42B1C);         // 4.4:1 against StripOn
+            t.StripUnknown = Rgb(0xECECEC);
             return t;
         }
 
@@ -62,116 +86,98 @@ namespace UABlackoutPreWarning
         {
             var t = new Theme();
             t.Dark = true;
-            t.Window = Color.FromArgb(0x20, 0x20, 0x20);
-            t.Text = Color.FromArgb(0xF3, 0xF3, 0xF3);
-            t.Sub = Color.FromArgb(0xAB, 0xAB, 0xAB);
-            t.Border = Color.FromArgb(0x45, 0x45, 0x45);
-            t.Input = Color.FromArgb(0x2D, 0x2D, 0x2D);
-            t.InputText = Color.FromArgb(0xF3, 0xF3, 0xF3);
-            t.Button = Color.FromArgb(0x2D, 0x2D, 0x2D);
-            t.ButtonBorder = Color.FromArgb(0x5A, 0x5A, 0x5A);
-            t.ButtonHover = Color.FromArgb(0x3A, 0x3A, 0x3A);
-            t.Primary = Color.FromArgb(0x4C, 0xC2, 0xFF);
-            t.PrimaryText = Color.Black;
-            t.Link = Color.FromArgb(0x99, 0xEB, 0xFF);
-            t.Warn = Color.FromArgb(0xFF, 0x99, 0xA4);
-            t.StripOn = Color.FromArgb(0x3A, 0x3A, 0x3A);
-            t.StripOff = Color.FromArgb(0xF2, 0x5F, 0x55);    // 3.5:1 against StripOn, so red reads apart from grey
-            t.StripUnknown = Color.FromArgb(0x2A, 0x2A, 0x2A);
-            t.Marker = Color.White;
+            t.Window = Rgb(0x202020);
+            t.Card = Rgb(0x2B2B2B);
+            t.CardStroke = Rgb(0x363636);
+            t.Text = Rgb(0xFFFFFF);
+            t.Sub = Rgb(0xC5C5C5);
+            t.Warn = Rgb(0xFF99A4);
+            t.Accent = Rgb(0x60CDFF);           // Windows 11 default accent for dark mode
+            t.OnAccent = Color.Black;
+            t.Control = Rgb(0x2D2D2D);
+            t.ControlStroke = Rgb(0x3A3A3A);
+            t.FieldBottom = Rgb(0x9A9A9A);
+            t.StripOn = Rgb(0x3A3A3A);
+            t.StripOff = Rgb(0xF25F55);         // 3.5:1 against StripOn
+            t.StripUnknown = Rgb(0x333333);
             return t;
         }
 
-        /// <summary>Recolours a control and all its children.</summary>
+        private static Color Rgb(int rgb)
+        {
+            return Color.FromArgb((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+        }
+
+        /// <summary>Mixes <paramref name="amount"/> (0..1) of <paramref name="b"/> into <paramref name="a"/>.</summary>
+        public static Color Blend(Color a, Color b, double amount)
+        {
+            return Color.FromArgb(
+                (int)Math.Round(a.R + (b.R - a.R) * amount),
+                (int)Math.Round(a.G + (b.G - a.G) * amount),
+                (int)Math.Round(a.B + (b.B - a.B) * amount));
+        }
+
+        /// <summary>Recolours a control and all its children; containers take their parent's background.</summary>
         public void Apply(Control c)
         {
             var role = c.Tag as string;
+            var parentBack = c.Parent != null ? c.Parent.BackColor : Window;
 
-            if (c is Form || c is PictureBox)
+            if (c is Form)
             {
                 c.BackColor = Window;
                 c.ForeColor = Text;
             }
-            else if (c is ThemedGroupBox)
+            else if (c is Card)
             {
-                var g = (ThemedGroupBox)c;
-                g.BackColor = Window;
-                g.ForeColor = Text;
-                g.Dark = Dark;
-                g.BorderColor = Border;
-                g.Invalidate();
+                var card = (Card)c;
+                card.BackColor = Card;
+                card.BorderColor = CardStroke;
+                card.Invalidate();
+            }
+            else if (c is IThemed)
+            {
+                c.BackColor = parentBack;
+                ((IThemed)c).SetTheme(this);
             }
             else if (c is LinkLabel)
             {
                 var l = (LinkLabel)c;
-                l.LinkColor = Link;
-                l.ActiveLinkColor = Link;
-                l.VisitedLinkColor = Link;
+                l.BackColor = parentBack;
+                l.LinkColor = Accent;
+                l.ActiveLinkColor = Accent;
+                l.VisitedLinkColor = Accent;
+                l.ForeColor = Text;
             }
             else if (c is Label)
             {
+                c.BackColor = parentBack;
                 c.ForeColor = role == RoleSub ? Sub : (role == RoleWarn ? Warn : Text);
             }
             else if (c is TextBox || c is NumericUpDown)
             {
-                c.BackColor = Input;
-                c.ForeColor = InputText;
-                var box = c as TextBox;
-                if (box != null) box.BorderStyle = Dark ? BorderStyle.FixedSingle : BorderStyle.Fixed3D;
-                var num = c as NumericUpDown;
-                if (num != null) num.BorderStyle = Dark ? BorderStyle.FixedSingle : BorderStyle.Fixed3D;
-            }
-            else if (c is ComboBox)
-            {
-                var cb = (ComboBox)c;
-                cb.FlatStyle = Dark ? FlatStyle.Flat : FlatStyle.Standard;
-                cb.BackColor = Input;
-                cb.ForeColor = InputText;
-            }
-            else if (c is CheckBox)
-            {
-                var cb = (CheckBox)c;
-                cb.FlatStyle = Dark ? FlatStyle.Flat : FlatStyle.Standard;
-                cb.FlatAppearance.BorderColor = ButtonBorder;
-                cb.FlatAppearance.CheckedBackColor = Input;
-                cb.BackColor = Window;
-                cb.ForeColor = Text;
-            }
-            else if (c is Button)
-            {
-                var b = (Button)c;
-                bool primary = role == RolePrimary;
-                if (Dark)
-                {
-                    b.FlatStyle = FlatStyle.Flat;
-                    b.BackColor = primary ? Primary : Button;
-                    b.ForeColor = primary ? PrimaryText : Text;
-                    b.FlatAppearance.BorderColor = primary ? Primary : ButtonBorder;
-                    b.FlatAppearance.MouseOverBackColor = primary ? ControlPaint.Light(Primary, 0.3f) : ButtonHover;
-                    b.FlatAppearance.MouseDownBackColor = primary ? ControlPaint.Dark(Primary, 0.1f) : Border;
-                }
-                else
-                {
-                    b.FlatStyle = FlatStyle.Standard;
-                    b.BackColor = SystemColors.Control;
-                    b.ForeColor = SystemColors.ControlText;
-                    b.UseVisualStyleBackColor = true;
-                }
+                c.BackColor = Control;
+                c.ForeColor = Text;
             }
             else if (c is DayStrip)
             {
+                c.BackColor = parentBack;
                 ((DayStrip)c).SetTheme(this);
             }
-            else if (c is ThemeToggle)
+            else if (role == RoleStripOff) c.BackColor = StripOff;
+            else if (role == RoleStripOn) c.BackColor = StripOn;
+            else if (role == RoleSurface) c.BackColor = Card;
+            else if (role == RoleDivider) c.BackColor = CardStroke;
+            else
             {
-                c.BackColor = Window;
-                c.Invalidate();
+                c.BackColor = parentBack;
+                c.ForeColor = Text;
             }
 
             foreach (Control child in c.Controls) Apply(child);
         }
 
-        // ---- dark title bar (DWM) -------------------------------------------------
+        // ---- window frame (DWM) -----------------------------------------------------
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
@@ -181,19 +187,39 @@ namespace UABlackoutPreWarning
 
         private const int DwmUseImmersiveDarkMode = 20;          // Windows 10 20H1+ and Windows 11
         private const int DwmUseImmersiveDarkModeOld = 19;       // Windows 10 1809-1909
+        private const int DwmWindowCornerPreference = 33;        // Windows 11
+        private const int DwmCaptionColor = 35;                  // Windows 11
+        private const int DwmSystemBackdropType = 38;            // Windows 11 22H2 (build 22621)
+        private const int CornerRound = 2, BackdropMica = 2;
         private const uint SwpFrameChanged = 0x0020, SwpNoMove = 0x0002, SwpNoSize = 0x0001,
                            SwpNoZOrder = 0x0004, SwpNoActivate = 0x0010;
 
-        /// <summary>Asks Windows to draw the window's title bar dark or light. Ignored where unsupported.</summary>
-        public static void ApplyTitleBar(Form form, bool dark)
+        /// <summary>
+        /// The title bar and frame follow the theme: dark or light, rounded corners on Windows 11, and the
+        /// title bar either shows Mica (22H2+) or takes the window's own colour, so it blends with the
+        /// content. Each attribute is ignored where Windows does not support it.
+        /// </summary>
+        public void ApplyFrame(Form form)
         {
             if (!form.IsHandleCreated || Environment.OSVersion.Platform != PlatformID.Win32NT) return;
-            int value = dark ? 1 : 0;
+            int build = Environment.OSVersion.Version.Build;
             try
             {
-                if (DwmSetWindowAttribute(form.Handle, DwmUseImmersiveDarkMode, ref value, 4) != 0)
+                int dark = Dark ? 1 : 0;
+                if (DwmSetWindowAttribute(form.Handle, DwmUseImmersiveDarkMode, ref dark, 4) != 0)
                 {
-                    DwmSetWindowAttribute(form.Handle, DwmUseImmersiveDarkModeOld, ref value, 4);
+                    DwmSetWindowAttribute(form.Handle, DwmUseImmersiveDarkModeOld, ref dark, 4);
+                }
+                if (build >= 22000)
+                {
+                    int corner = CornerRound;
+                    DwmSetWindowAttribute(form.Handle, DwmWindowCornerPreference, ref corner, 4);
+                    int mica = BackdropMica;
+                    if (build < 22621 || DwmSetWindowAttribute(form.Handle, DwmSystemBackdropType, ref mica, 4) != 0)
+                    {
+                        int colour = Window.R | (Window.G << 8) | (Window.B << 16);      // COLORREF
+                        DwmSetWindowAttribute(form.Handle, DwmCaptionColor, ref colour, 4);
+                    }
                 }
                 // Repaint the frame now rather than on the next activation.
                 SetWindowPos(form.Handle, IntPtr.Zero, 0, 0, 0, 0,
@@ -211,258 +237,574 @@ namespace UABlackoutPreWarning
 
         public void ApplyMenu(ContextMenuStrip menu)
         {
-            if (Dark)
-            {
-                menu.Renderer = new ToolStripProfessionalRenderer(new DarkMenuColors(this));
-            }
-            else
-            {
-                menu.RenderMode = ToolStripRenderMode.ManagerRenderMode;
-            }
+            menu.Renderer = new ToolStripProfessionalRenderer(new MenuColors(this));
+            menu.Font = Ui.Body;
             foreach (ToolStripItem item in menu.Items)
             {
-                if (Dark) item.ForeColor = Text;
-                else item.ResetForeColor();
+                item.ForeColor = Text;
+                item.Padding = new Padding(Ui.S(4), Ui.S(4), Ui.S(4), Ui.S(4));
             }
         }
 
-        private sealed class DarkMenuColors : ProfessionalColorTable
+        private sealed class MenuColors : ProfessionalColorTable
         {
             private readonly Theme t;
 
-            public DarkMenuColors(Theme theme)
+            public MenuColors(Theme theme)
             {
                 t = theme;
                 UseSystemColors = false;
             }
 
-            public override Color ToolStripDropDownBackground { get { return t.Input; } }
-            public override Color ImageMarginGradientBegin { get { return t.Input; } }
-            public override Color ImageMarginGradientMiddle { get { return t.Input; } }
-            public override Color ImageMarginGradientEnd { get { return t.Input; } }
-            public override Color MenuBorder { get { return t.Border; } }
-            public override Color MenuItemBorder { get { return t.ButtonHover; } }
-            public override Color MenuItemSelected { get { return t.ButtonHover; } }
-            public override Color MenuItemSelectedGradientBegin { get { return t.ButtonHover; } }
-            public override Color MenuItemSelectedGradientEnd { get { return t.ButtonHover; } }
-            public override Color SeparatorDark { get { return t.Border; } }
-            public override Color SeparatorLight { get { return t.Border; } }
+            private Color Menu { get { return t.Dark ? t.Card : Color.FromArgb(0xF9, 0xF9, 0xF9); } }
+            private Color Hover { get { return Blend(Menu, t.Text, 0.07); } }
+
+            public override Color ToolStripDropDownBackground { get { return Menu; } }
+            public override Color ImageMarginGradientBegin { get { return Menu; } }
+            public override Color ImageMarginGradientMiddle { get { return Menu; } }
+            public override Color ImageMarginGradientEnd { get { return Menu; } }
+            public override Color MenuBorder { get { return t.Dark ? t.CardStroke : Color.FromArgb(0xD9, 0xD9, 0xD9); } }
+            public override Color MenuItemBorder { get { return Hover; } }
+            public override Color MenuItemSelected { get { return Hover; } }
+            public override Color MenuItemSelectedGradientBegin { get { return Hover; } }
+            public override Color MenuItemSelectedGradientEnd { get { return Hover; } }
+            public override Color SeparatorDark { get { return t.CardStroke; } }
+            public override Color SeparatorLight { get { return Menu; } }
         }
     }
 
-    /// <summary>GroupBox whose frame and title follow the theme (standard drawing in light mode).</summary>
-    internal sealed class ThemedGroupBox : GroupBox
+    /// <summary>A control that draws itself from the theme.</summary>
+    internal interface IThemed
     {
-        public bool Dark;
-        public Color BorderColor = SystemColors.ControlDark;
-
-        public ThemedGroupBox()
-        {
-            SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
-        }
-
-        /// <summary>
-        /// WS_CLIPCHILDREN: a group box normally paints underneath its children, so a partial
-        /// repaint of the frame could cover the top of the day strip. Clipping prevents that.
-        /// </summary>
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                var cp = base.CreateParams;
-                cp.Style |= 0x02000000;
-                return cp;
-            }
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            if (!Dark)
-            {
-                base.OnPaint(e);
-                return;
-            }
-
-            var g = e.Graphics;
-            g.Clear(BackColor);
-            var textSize = TextRenderer.MeasureText(g, Text, Font, Size.Empty, TextFormatFlags.NoPadding);
-            int top = textSize.Height / 2;
-            int textLeft = 8;
-            using (var pen = new Pen(BorderColor))
-            {
-                g.DrawLine(pen, 0, top, textLeft - 2, top);
-                g.DrawLine(pen, textLeft + textSize.Width + 2, top, Width - 1, top);
-                g.DrawLine(pen, 0, top, 0, Height - 1);
-                g.DrawLine(pen, Width - 1, top, Width - 1, Height - 1);
-                g.DrawLine(pen, 0, Height - 1, Width - 1, Height - 1);
-            }
-            TextRenderer.DrawText(g, Text, Font, new Point(textLeft, 0), ForeColor, TextFormatFlags.NoPadding);
-        }
+        void SetTheme(Theme theme);
     }
 
     /// <summary>
-    /// Day/Night switch: a pill with a round handle. Light = handle on the right with a sun;
-    /// dark = handle on the left with a moon. Click, Space or Enter toggles it.
+    /// Pixel sizes and fonts. The app is system-DPI aware, so one scale factor (system DPI / 96) holds for
+    /// the whole run; layouts are written in 96-DPI units and converted with <see cref="S"/> - no WinForms
+    /// auto-scaling, which moved controls to the wrong place at 125 % in the past.
     /// </summary>
-    internal sealed class ThemeToggle : Control
+    internal static class Ui
     {
-        private bool dark;
+        public static readonly float Scale = ReadScale();
+        public static readonly Font Body = Pick(10.5F, false, "Segoe UI Variable Text", "Segoe UI");
+        public static readonly Font BodyStrong = Pick(10.5F, true, "Segoe UI Variable Text", "Segoe UI");
+        public static readonly Font Caption = Pick(9F, false, "Segoe UI Variable Small", "Segoe UI");
+        public static readonly Font Subtitle = Pick(15F, true, "Segoe UI Variable Display", "Segoe UI");
+        public static readonly Font Title = Pick(21F, true, "Segoe UI Variable Display", "Segoe UI");
 
-        public event EventHandler Toggled;
+        /// <summary>Segoe Fluent Icons (Windows 11) or Segoe MDL2 Assets (Windows 10); null if neither exists.</summary>
+        public static readonly Font Icons = PickIcons(12F);
 
-        public ThemeToggle()
+        public const string GlyphSettings = "", GlyphHelp = "", GlyphMoon = "", GlyphInfo = "",
+                            GlyphCalendar = "", GlyphOpen = "", GlyphChevron = "", GlyphCheck = "";
+
+        public static int S(int value)
         {
-            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
-                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
-                     ControlStyles.Selectable | ControlStyles.StandardClick, true);
-            TabStop = true;
-            Cursor = Cursors.Hand;
-            AccessibleRole = AccessibleRole.CheckButton;
+            return (int)Math.Round(value * Scale);
         }
 
-        public bool DarkMode
+        private static float ReadScale()
         {
-            get { return dark; }
-            set
+            try
             {
-                if (dark == value) return;
-                dark = value;
-                Invalidate();
+                using (var g = Graphics.FromHwnd(IntPtr.Zero)) return Math.Max(1F, g.DpiX / 96F);
+            }
+            catch (Exception)
+            {
+                return 1F;
             }
         }
 
-        private void Toggle()
+        /// <summary>
+        /// The first installed family; semibold where asked. Segoe UI Variable's semibold is a named
+        /// instance ("… Semibold"); Segoe UI has "Segoe UI Semibold"; otherwise bold.
+        /// </summary>
+        private static Font Pick(float size, bool semibold, params string[] families)
         {
-            DarkMode = !DarkMode;
-            if (Toggled != null) Toggled(this, EventArgs.Empty);
-        }
-
-        protected override void OnClick(EventArgs e)
-        {
-            Focus();
-            Toggle();
-            base.OnClick(e);
-        }
-
-        protected override void OnKeyDown(KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter)
+            foreach (var family in families)
             {
-                Toggle();
-                e.Handled = true;
-                return;
+                var f = Exists(semibold ? family + " Semibold" : family, size, FontStyle.Regular);
+                if (f != null) return f;
             }
-            base.OnKeyDown(e);
+            return new Font(SystemFonts.MessageBoxFont.FontFamily, size, semibold ? FontStyle.Bold : FontStyle.Regular);
         }
 
-        protected override bool IsInputKey(Keys keyData)
+        private static Font PickIcons(float size)
         {
-            return keyData == Keys.Enter || base.IsInputKey(keyData);
+            return Exists("Segoe Fluent Icons", size, FontStyle.Regular) ?? Exists("Segoe MDL2 Assets", size, FontStyle.Regular);
         }
 
-        protected override void OnGotFocus(EventArgs e)
+        private static Font Exists(string family, float size, FontStyle style)
         {
-            Invalidate();
-            base.OnGotFocus(e);
+            var f = new Font(family, size, style);
+            if (string.Equals(f.Name, family, StringComparison.OrdinalIgnoreCase)) return f;
+            f.Dispose();
+            return null;
         }
 
-        protected override void OnLostFocus(EventArgs e)
+        /// <summary>Height of <paramref name="text"/> wrapped to <paramref name="width"/> pixels.</summary>
+        public static int TextHeight(string text, Font font, int width)
         {
-            Invalidate();
-            base.OnLostFocus(e);
+            var flags = TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl;
+            return TextRenderer.MeasureText(string.IsNullOrEmpty(text) ? " " : text, font, new Size(width, int.MaxValue), flags).Height;
         }
 
-        protected override void OnPaint(PaintEventArgs e)
+        public static int TextWidth(string text, Font font)
         {
-            var g = e.Graphics;
-            g.Clear(BackColor);
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-
-            float s = Height / 28F;                      // drawn on a 56 x 28 grid
-            float w = Width - 1, h = Height - 1;
-            Color track = dark ? Color.FromArgb(0x3A, 0x3A, 0x3A) : Color.FromArgb(0xE6, 0xE6, 0xE6);
-            Color edge = dark ? Color.FromArgb(0x6B, 0x6B, 0x6B) : Color.FromArgb(0x8A, 0x8A, 0x8A);
-            Color knob = dark ? Color.FromArgb(0xF3, 0xF3, 0xF3) : Color.White;
-
-            using (var path = Pill(0.5F, 0.5F, w - 1, h - 1))
-            using (var fill = new SolidBrush(track))
-            using (var pen = new Pen(edge, 1))
-            {
-                g.FillPath(fill, path);
-                g.DrawPath(pen, path);
-            }
-
-            float cy = h / 2;
-            float left = 14 * s, right = w - 14 * s;
-            float r = 11 * s;
-
-            if (dark)
-            {
-                Sun(g, right, cy, s, Color.FromArgb(0xAB, 0xAB, 0xAB), false);
-                using (var b = new SolidBrush(knob)) g.FillEllipse(b, left - r, cy - r, 2 * r, 2 * r);
-                Moon(g, left, cy, s, Color.FromArgb(0x20, 0x20, 0x20), knob);
-            }
-            else
-            {
-                Moon(g, left, cy, s * 0.9F, Color.FromArgb(0x6B, 0x6B, 0x6B), track);
-                using (var b = new SolidBrush(knob)) g.FillEllipse(b, right - r, cy - r, 2 * r, 2 * r);
-                using (var p = new Pen(edge, 1)) g.DrawEllipse(p, right - r, cy - r, 2 * r, 2 * r);
-                Sun(g, right, cy, s, Color.FromArgb(0xE8, 0xA4, 0x00), true);
-            }
-
-            if (Focused && ShowFocusCues)
-            {
-                using (var path = Pill(1.5F, 1.5F, w - 3, h - 3))
-                using (var pen = new Pen(dark ? Color.White : Color.Black, 1))
-                {
-                    pen.DashStyle = DashStyle.Dot;
-                    g.DrawPath(pen, path);
-                }
-            }
+            return TextRenderer.MeasureText(string.IsNullOrEmpty(text) ? " " : text, font, Size.Empty, TextFormatFlags.NoPadding).Width;
         }
 
-        private static GraphicsPath Pill(float x, float y, float w, float h)
+        /// <summary>A label that wraps its text; size it with <see cref="Fit"/>.</summary>
+        public static Label Label(string text, Font font, string role)
+        {
+            var l = new Label();
+            l.AutoSize = false;
+            l.UseMnemonic = false;
+            l.Font = font;
+            l.Text = text;
+            l.Tag = role;
+            return l;
+        }
+
+        /// <summary>Places a wrapping label at (x, y) with the given width; returns its bottom.</summary>
+        public static int Fit(Label l, int x, int y, int width)
+        {
+            l.SetBounds(x, y, width, TextHeight(l.Text, l.Font, width));
+            return l.Bottom;
+        }
+
+        /// <summary>A label sized to its one-line text.</summary>
+        public static Label Inline(string text, Font font, string role)
+        {
+            var l = Label(text, font, role);
+            l.AutoSize = true;
+            l.Padding = Padding.Empty;
+            l.Margin = Padding.Empty;
+            return l;
+        }
+
+        /// <summary>A Segoe icon glyph as a decorative label (hidden from screen readers by its empty name).</summary>
+        public static Label Glyph(string glyph, string role)
+        {
+            var l = Inline(Icons != null ? glyph : "", Icons ?? Caption, role);
+            l.AccessibleRole = AccessibleRole.Graphic;
+            l.AccessibleName = "";
+            return l;
+        }
+
+        public static LinkLabel Link(string text, Font font, string url)
+        {
+            var l = new LinkLabel();
+            l.AutoSize = true;
+            l.UseMnemonic = false;
+            l.Font = font;
+            l.Text = text;
+            l.Padding = Padding.Empty;
+            l.Margin = Padding.Empty;
+            l.LinkBehavior = LinkBehavior.HoverUnderline;
+            if (url != null) l.LinkClicked += delegate { AppInfo.OpenUrl(l.FindForm(), url); };
+            return l;
+        }
+
+        public static GraphicsPath Round(RectangleF r, float radius)
         {
             var p = new GraphicsPath();
-            float d = h;
-            p.AddArc(x, y, d, d, 90, 180);
-            p.AddArc(x + w - d, y, d, d, 270, 180);
+            float d = Math.Min(2 * radius, Math.Min(r.Width, r.Height));
+            if (d <= 0)
+            {
+                p.AddRectangle(r);
+                return p;
+            }
+            p.AddArc(r.X, r.Y, d, d, 180, 90);
+            p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+            p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
             p.CloseFigure();
             return p;
         }
 
-        private static void Sun(Graphics g, float cx, float cy, float s, Color colour, bool filled)
+        /// <summary>The keyboard focus visual: a 2 px rounded outline in the text colour.</summary>
+        public static void FocusRing(Graphics g, Rectangle bounds, Color colour)
         {
-            float core = 3.3F * s;
-            using (var pen = new Pen(colour, 1.6F * s))
+            using (var path = Round(new RectangleF(bounds.X + 1, bounds.Y + 1, bounds.Width - 2, bounds.Height - 2), S(5)))
+            using (var pen = new Pen(colour, S(2)))
             {
-                pen.StartCap = LineCap.Round;
-                pen.EndCap = LineCap.Round;
-                if (filled)
+                g.DrawPath(pen, path);
+            }
+        }
+    }
+
+    /// <summary>A rounded surface (4 px corners) with a 1 px stroke: the Windows 11 settings card.</summary>
+    internal sealed class Card : Panel
+    {
+        public Color BorderColor = SystemColors.ControlDark;
+
+        public Card()
+        {
+            SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.Clear(Parent != null ? Parent.BackColor : BackColor);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            using (var path = Ui.Round(new RectangleF(0.5F, 0.5F, Width - 1, Height - 1), Ui.S(4)))
+            using (var fill = new SolidBrush(BackColor))
+            using (var pen = new Pen(BorderColor))
+            {
+                g.FillPath(fill, path);
+                g.DrawPath(pen, path);
+            }
+        }
+    }
+
+    /// <summary>Button styles of Windows 11: standard, accent (the one primary action) and subtle (icon only).</summary>
+    internal enum ButtonKind
+    {
+        Standard,
+        Accent,
+        Subtle
+    }
+
+    /// <summary>A Windows 11 style button, drawn by hand in both themes; keyboard and screen readers as a normal Button.</summary>
+    internal sealed class FluentButton : Button, IThemed
+    {
+        private Theme theme = Theme.LightTheme;
+        private bool hover, pressed;
+
+        public ButtonKind Kind;
+
+        public FluentButton(ButtonKind kind)
+        {
+            Kind = kind;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            FlatStyle = FlatStyle.Flat;
+            UseMnemonic = false;
+            Font = Ui.Body;
+            Height = Ui.S(32);
+        }
+
+        /// <summary>A borderless icon button (Segoe glyph) with the given accessible name and tooltip text.</summary>
+        public static FluentButton Icon(string glyph, string fallback, string name)
+        {
+            var b = new FluentButton(ButtonKind.Subtle);
+            b.Font = Ui.Icons ?? Ui.Body;
+            b.Text = Ui.Icons != null ? glyph : fallback;
+            b.AccessibleName = name;
+            b.Size = new Size(Ui.S(36), Ui.S(36));
+            return b;
+        }
+
+        /// <summary>Width for the text plus 12 px padding each side, at least <paramref name="min96"/>.</summary>
+        public void FitWidth(int min96)
+        {
+            Width = Math.Max(Ui.S(min96), Ui.TextWidth(Text, Font) + Ui.S(24));
+        }
+
+        public void SetTheme(Theme t)
+        {
+            theme = t;
+            Invalidate();
+        }
+
+        protected override void OnMouseEnter(EventArgs e) { hover = true; Invalidate(); base.OnMouseEnter(e); }
+        protected override void OnMouseLeave(EventArgs e) { hover = false; pressed = false; Invalidate(); base.OnMouseLeave(e); }
+        protected override void OnMouseDown(MouseEventArgs e) { if (e.Button == MouseButtons.Left) { pressed = true; Invalidate(); } base.OnMouseDown(e); }
+        protected override void OnMouseUp(MouseEventArgs e) { pressed = false; Invalidate(); base.OnMouseUp(e); }
+        protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
+        protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            var back = Parent != null ? Parent.BackColor : theme.Window;
+            g.Clear(back);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            Color fill, text, stroke;
+            if (Kind == ButtonKind.Accent)
+            {
+                fill = pressed ? Theme.Blend(theme.Accent, back, 0.2) : (hover ? Theme.Blend(theme.Accent, back, 0.1) : theme.Accent);
+                text = theme.OnAccent;
+                stroke = theme.HighContrast ? theme.Text : fill;
+            }
+            else if (Kind == ButtonKind.Subtle)
+            {
+                fill = pressed ? Theme.Blend(back, theme.Text, 0.04) : (hover ? Theme.Blend(back, theme.Text, 0.07) : back);
+                text = theme.Text;
+                stroke = theme.HighContrast ? theme.Text : fill;     // High Contrast: every button shows its edge
+            }
+            else
+            {
+                fill = pressed ? Theme.Blend(theme.Control, back, 0.5) : (hover ? Theme.Blend(theme.Control, theme.Text, 0.03) : theme.Control);
+                text = pressed ? theme.Sub : theme.Text;
+                stroke = theme.ControlStroke;
+            }
+
+            using (var path = Ui.Round(new RectangleF(0.5F, 0.5F, Width - 1, Height - 1), Ui.S(4)))
+            using (var brush = new SolidBrush(fill))
+            using (var pen = new Pen(stroke))
+            {
+                g.FillPath(brush, path);
+                g.DrawPath(pen, path);
+            }
+            TextRenderer.DrawText(g, Text, Font, ClientRectangle, text,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+            if (Focused && ShowFocusCues) Ui.FocusRing(g, ClientRectangle, theme.Text);
+        }
+    }
+
+    /// <summary>
+    /// Windows 11 toggle switch. A CheckBox underneath, so Space toggles it and screen readers announce a
+    /// check box with its <see cref="Control.Text"/> and state; only the state words and the track are drawn.
+    /// </summary>
+    internal sealed class ToggleSwitch : CheckBox, IThemed
+    {
+        private Theme theme = Theme.LightTheme;
+        private bool hover;
+
+        /// <summary>Drawn left of the track ("Увімк." / "Вимк."); empty strings draw the track only.</summary>
+        public string OnText = "", OffText = "";
+
+        public ToggleSwitch()
+        {
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            AutoSize = false;
+            UseMnemonic = false;
+            Font = Ui.Body;
+        }
+
+        /// <summary>Width for the longer state word plus the 40 x 20 track.</summary>
+        public void FitWidth()
+        {
+            int words = Math.Max(Ui.TextWidth(OnText, Font), Ui.TextWidth(OffText, Font));
+            if (string.IsNullOrEmpty(OnText) && string.IsNullOrEmpty(OffText)) words = 0;
+            Size = new Size((words > 0 ? words + Ui.S(12) : 0) + Ui.S(46), Ui.S(28));
+        }
+
+        public void SetTheme(Theme t)
+        {
+            theme = t;
+            Invalidate();
+        }
+
+        protected override void OnCheckedChanged(EventArgs e) { Invalidate(); base.OnCheckedChanged(e); }
+        protected override void OnMouseEnter(EventArgs e) { hover = true; Invalidate(); base.OnMouseEnter(e); }
+        protected override void OnMouseLeave(EventArgs e) { hover = false; Invalidate(); base.OnMouseLeave(e); }
+        protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
+        protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            var back = Parent != null ? Parent.BackColor : theme.Window;
+            g.Clear(back);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            int w = Ui.S(40), h = Ui.S(20);
+            var track = new RectangleF(Width - w - Ui.S(3) + 0.5F, (Height - h) / 2F + 0.5F, w - 1, h - 1);
+            var words = Checked ? OnText : OffText;
+            if (!string.IsNullOrEmpty(words))
+            {
+                var area = new Rectangle(0, 0, (int)track.Left - Ui.S(12), Height);
+                TextRenderer.DrawText(g, words, Font, area, theme.Text,
+                    TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+            }
+
+            float knob = Ui.S(hover ? 14 : 12);
+            using (var path = Ui.Round(track, track.Height / 2))
+            {
+                if (Checked)
                 {
-                    using (var b = new SolidBrush(colour)) g.FillEllipse(b, cx - core, cy - core, 2 * core, 2 * core);
+                    using (var b = new SolidBrush(hover ? Theme.Blend(theme.Accent, back, 0.1) : theme.Accent)) g.FillPath(b, path);
                 }
                 else
                 {
-                    g.DrawEllipse(pen, cx - core, cy - core, 2 * core, 2 * core);
+                    using (var b = new SolidBrush(hover ? Theme.Blend(back, theme.Text, 0.05) : back)) g.FillPath(b, path);
+                    using (var p = new Pen(theme.Sub)) g.DrawPath(p, path);
                 }
-                for (int i = 0; i < 8; i++)
+            }
+            float cx = Checked ? track.Right - track.Height / 2 : track.Left + track.Height / 2;
+            float cy = track.Top + track.Height / 2;
+            using (var b = new SolidBrush(Checked ? theme.OnAccent : theme.Sub))
+            {
+                g.FillEllipse(b, cx - knob / 2, cy - knob / 2, knob, knob);
+            }
+            if (Focused && ShowFocusCues)
+            {
+                var ring = Rectangle.Round(track);
+                ring.Inflate(Ui.S(3), Ui.S(3));
+                using (var path = Ui.Round(ring, ring.Height / 2F))
+                using (var pen = new Pen(theme.Text, Ui.S(2)))
                 {
-                    double a = i * Math.PI / 4;
-                    float r1 = 5.4F * s, r2 = 7.4F * s;
-                    g.DrawLine(pen, cx + (float)Math.Cos(a) * r1, cy + (float)Math.Sin(a) * r1,
-                                    cx + (float)Math.Cos(a) * r2, cy + (float)Math.Sin(a) * r2);
+                    g.DrawPath(pen, path);
                 }
             }
         }
+    }
 
-        private static void Moon(Graphics g, float cx, float cy, float s, Color colour, Color background)
+    /// <summary>
+    /// The Windows 11 text field frame around a borderless TextBox or NumericUpDown: rounded, 1 px stroke,
+    /// a stronger bottom edge that becomes a 2 px accent line while the field has focus.
+    /// </summary>
+    internal sealed class FieldHost : Panel, IThemed
+    {
+        private Theme theme = Theme.LightTheme;
+        public readonly Control Field;
+
+        public FieldHost(Control field, int width)
         {
-            float r = 6.4F * s;
-            using (var b = new SolidBrush(colour)) g.FillEllipse(b, cx - r - 0.5F * s, cy - r, 2 * r, 2 * r);
-            float r2 = 5.2F * s;
-            float ox = cx + 2.4F * s, oy = cy - 2.4F * s;
-            using (var b = new SolidBrush(background)) g.FillEllipse(b, ox - r2, oy - r2, 2 * r2, 2 * r2);
+            SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
+            Field = field;
+            field.Font = Ui.Body;
+            var box = field as TextBox;
+            if (box != null) box.BorderStyle = BorderStyle.None;
+            var num = field as NumericUpDown;
+            if (num != null) num.BorderStyle = BorderStyle.None;
+            Size = new Size(width, Ui.S(32));
+            Controls.Add(field);
+            field.GotFocus += delegate { Invalidate(); };
+            field.LostFocus += delegate { Invalidate(); };
+            Click += delegate { field.Focus(); };
+        }
+
+        protected override void OnLayout(LayoutEventArgs e)
+        {
+            base.OnLayout(e);
+            int pad = Ui.S(10);
+            int width = Width - 2 * pad;
+            var num = Field as NumericUpDown;
+            if (num != null && num.Controls.Count > 0)
+            {
+                // No spin buttons in a Windows 11 number box: widen the control by their width and clip them
+                // away (hiding them leaves an unpainted block); arrow keys and the mouse wheel still work.
+                var spin = num.Controls[0];
+                spin.AccessibleRole = AccessibleRole.None;      // clipped away, so not offered to screen readers
+                spin.AccessibleName = "";
+                int buttons = spin.Width;
+                Field.SetBounds(pad, (Height - Field.Height) / 2, width + buttons, Field.Height);
+                var old = Field.Region;
+                Field.Region = new Region(new Rectangle(0, 0, width, Field.Height));
+                if (old != null) old.Dispose();
+                return;
+            }
+            Field.SetBounds(pad, (Height - Field.Height) / 2, width, Field.Height);
+        }
+
+        public void SetTheme(Theme t)
+        {
+            theme = t;
+            Invalidate();
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            g.Clear(Parent != null ? Parent.BackColor : theme.Window);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            var r = new RectangleF(0.5F, 0.5F, Width - 1, Height - 1);
+            using (var path = Ui.Round(r, Ui.S(4)))
+            using (var fill = new SolidBrush(theme.Control))
+            using (var pen = new Pen(theme.ControlStroke))
+            {
+                g.FillPath(fill, path);
+                g.DrawPath(pen, path);
+            }
+            g.SmoothingMode = SmoothingMode.None;
+            bool focused = Field.ContainsFocus;
+            int line = focused ? Ui.S(2) : 1;
+            using (var b = new SolidBrush(focused ? theme.Accent : theme.FieldBottom))
+            {
+                g.FillRectangle(b, Ui.S(3), Height - line, Width - 2 * Ui.S(3), line);
+            }
+        }
+    }
+
+    /// <summary>
+    /// A drop-down list drawn like a Windows 11 ComboBox in both themes. The native control keeps keyboard,
+    /// mouse and screen-reader behaviour; its closed box is painted over after Windows draws it.
+    /// </summary>
+    internal sealed class FluentCombo : ComboBox, IThemed
+    {
+        private Theme theme = Theme.LightTheme;
+        private const int WmPaint = 0x000F;
+
+        public FluentCombo(int width)
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList;
+            DrawMode = DrawMode.OwnerDrawFixed;
+            FlatStyle = FlatStyle.Flat;
+            Font = Ui.Body;
+            ItemHeight = Ui.S(26);
+            Width = width;
+        }
+
+        public void SetTheme(Theme t)
+        {
+            theme = t;
+            BackColor = t.Control;
+            ForeColor = t.Text;
+            Invalidate();
+        }
+
+        protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
+        protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
+        protected override void OnSelectedIndexChanged(EventArgs e) { Invalidate(); base.OnSelectedIndexChanged(e); }
+
+        protected override void OnDrawItem(DrawItemEventArgs e)
+        {
+            if (e.Index < 0) return;
+            // The current item in the open list: accent fill (well over 3:1 against the other rows).
+            bool selected = (e.State & DrawItemState.Selected) != 0;
+            using (var b = new SolidBrush(selected ? theme.Accent : theme.Control))
+            {
+                e.Graphics.FillRectangle(b, e.Bounds);
+            }
+            var r = e.Bounds;
+            r.X += Ui.S(10);
+            r.Width -= Ui.S(10);
+            TextRenderer.DrawText(e.Graphics, GetItemText(Items[e.Index]), Font, r, selected ? theme.OnAccent : theme.Text,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix);
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            base.WndProc(ref m);
+            if (m.Msg != WmPaint || !IsHandleCreated) return;
+            using (var g = Graphics.FromHwnd(Handle))
+            {
+                var back = Parent != null ? Parent.BackColor : theme.Window;
+                g.Clear(back);
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                using (var path = Ui.Round(new RectangleF(0.5F, 0.5F, Width - 1, Height - 1), Ui.S(4)))
+                using (var fill = new SolidBrush(theme.Control))
+                using (var pen = new Pen(theme.ControlStroke))
+                {
+                    g.FillPath(fill, path);
+                    g.DrawPath(pen, path);
+                }
+                int chevron = Ui.S(28);
+                var text = new Rectangle(Ui.S(10), 0, Width - Ui.S(10) - chevron, Height);
+                TextRenderer.DrawText(g, SelectedIndex >= 0 ? GetItemText(SelectedItem) : "", Font, text, theme.Text,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix |
+                    TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
+                var arrow = new Rectangle(Width - chevron, 0, chevron - Ui.S(4), Height);
+                if (Ui.Icons != null)
+                {
+                    using (var small = new Font(Ui.Icons.FontFamily, 7.5F))
+                    {
+                        TextRenderer.DrawText(g, Ui.GlyphChevron, small, arrow, theme.Sub,
+                            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+                    }
+                }
+                if (Focused && ShowFocusCues) Ui.FocusRing(g, ClientRectangle, theme.Text);
+            }
         }
     }
 }

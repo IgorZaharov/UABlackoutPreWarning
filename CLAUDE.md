@@ -2,7 +2,7 @@
 
 Handoff and working notes for Claude (Claude Code or claude.ai). Read this first, then `docs/DESIGN.md`.
 Owner: Igor Zakharov (GitHub `IgorZaharov`). Last updated 2026-11-03, latest release **v1.3.4**
-(`main` is at 1.3.5, not yet released).
+(`main` is at 1.4.0, not yet released).
 
 ## 1. Goal
 
@@ -59,24 +59,32 @@ Windows notification per outage series, N minutes before it starts.
 | `src/Core/Models.cs` | `Slots`, `DaySchedule`, `ParsedPage`, `BlackoutSeries`, `Warning` |
 | `src/Core/ScheduleParser.cs` | HTML -> `ParsedPage` |
 | `src/Core/Schedule.cs` | `SeriesBuilder`, `WarningPlanner`, `KyivClock`, `PageDecoder` |
-| `src/Core/Settings.cs` | `AppSettings` (defaults, ranges, `Normalize`) |
-| `src/Core/Strings.cs` | All UI text, uk + en, time/duration formatting |
+| `src/Core/Settings.cs` | `AppSettings` (defaults, ranges, `Normalize`, `Language`) |
+| `src/Core/Strings.cs` | All UI text, uk + en, `ForLanguage`, time/duration formatting, day-strip spoken text |
+| `src/Core/Donations.cs` | `DonationList.Parse` (hand-written reader for donations.json; titled https links only) |
 | `src/App/Program.cs` | Single instance (mutex + `Local\UABlackoutPreWarning.Show` event), DPI aware, TLS 1.2 |
-| `src/App/TrayContext.cs` | Tray icon/menu, timers (warn 30 s, refresh, retry 1/2/5 min), downloads, `Notify`, `SendTestNotification`, memory trim, window position |
-| `src/App/MainForm.cs` | Main window: toolbar (gear, ?, Day/Night switch; Segoe MDL2 glyphs), status area, `DayStrip` |
-| `src/App/SettingsForm.cs` | "Параметри"/"Preferences": URL, queue, lead, refresh, Start with Windows, Restore defaults, Test notification, Check now, Save |
-| `src/App/AboutForm.cs` | Version, description, links: author, manual (README), Issues |
-| `src/App/Theme.cs` | Light/dark colours, `ThemedGroupBox`, `ThemeToggle`, dark title bar, dark tray menu |
+| `src/App/TrayContext.cs` | Tray icon/menu, timers (warn 30 s, refresh, retry 1/2/5 min), downloads, `Notify`, `SendTestNotification`, memory trim, window position, `ChangeLanguage`, donations download |
+| `src/App/MainForm.cs` | Main window: toolbar (queue, gear, ?, dark-theme switch), status card, `DayStrip`, site notice, links |
+| `src/App/SettingsForm.cs` | "Параметри"/"Preferences": sections Графік / Сповіщення / Система as cards; Save, Check now |
+| `src/App/QueueHelpForm.cs` | "Як дізнатися свою чергу" dialog (no title bar) |
+| `src/App/AboutForm.cs` | Version, description, links: author, manual (README), Issues; "Donations" section |
+| `src/App/Theme.cs` | Windows 11 colours, `Ui` (pixel scale `Ui.S`, fonts, glyphs), owner-drawn `Card`, `FluentButton`, `ToggleSwitch`, `FieldHost`, `FluentCombo`; title bar/Mica via DWM; tray menu |
 | `src/App/Toasts.cs` | AUMID registration, toast icon PNG, toast XML, WinRT show, COM release |
-| `src/App/Platform.cs` | `RegistrySettingsStore` (+ `MainWindowPosition`), `Autostart`, `ScheduleFetcher`, `MemoryTrim`, `AppInfo` |
-| `tests/Core.Tests/Program.cs` | Dependency-free test runner, 23 tests; fixtures in `tests/Fixtures/` (saved ZTOE pages) |
-| `tools/screenshots/` | `Shots.cs` + `shots.cmd`: runs the real app on a Windows runner for screenshots or a memory probe |
+| `src/App/Platform.cs` | `RegistrySettingsStore` (+ `MainWindowPosition`), `Autostart`, `Http`, `ScheduleFetcher`, `DonationFetcher` (json + favicons, memory only), `MemoryTrim`, `AppInfo` (URLs, `OpenUrl`) |
+| `donations.json` | Donation links shown in About; the app reads it from `raw.githubusercontent.com/.../main/donations.json`, so edits take effect after a push, without a release |
+| `tests/Core.Tests/Program.cs` | Dependency-free test runner, 29 tests; fixtures in `tests/Fixtures/` (saved ZTOE pages) |
+| `tools/screenshots/` | `Shots.cs` + `shots.cmd`: runs the real app for screenshots or a memory probe. Mode `windows` = window pictures only (both themes, queue help, a language switch; uses the local donations.json), safe to run on Igor's PC |
 | `tools/make_icon.py` | Generates `assets/app.ico` (crossed-out lightbulb) |
 | `.github/workflows/build.yml` | Build + tests on every push; attaches `UABlackoutPreWarning.zip` to releases |
 | `.github/workflows/screenshots.yml` | Manual: inputs `culture` (default `uk-UA`) and `mode` (`''` = screenshots, `memory` = memory/position probe); force-pushes results + `log.txt` to branch `screenshots` |
 
 Registry values (`HKCU\Software\UABlackoutPreWarning`): `ScheduleUrl`, `Queue`, `LeadMinutes` (1-120),
-`RefreshMinutes` (5-240), `StartWithWindows`, `DarkTheme`, `KnownQueues`, `NotifiedSeries`, `MainWindowPosition`.
+`RefreshMinutes` (5-240), `StartWithWindows`, `DarkTheme`, `Language` (empty = as Windows, `uk`, `en`),
+`KnownQueues`, `NotifiedSeries`, `MainWindowPosition`.
+
+UI layout rule since 1.4.0: windows use `AutoScaleMode.None` and place every control in real pixels with
+`Ui.S(96-DPI value)` and measured text (`Ui.Fit`, `Ui.TextHeight`) in each form's `Arrange()`. Never test
+`Control.Visible` before a window is shown (it reads false); forms keep their own flags (`hasNotice`, ...).
 
 ## 4. Build, test, release
 
@@ -129,38 +137,18 @@ Registry values (`HKCU\Software\UABlackoutPreWarning`): `ScheduleUrl`, `Queue`, 
 | 1.3.2 | Only the toast; balloon only as fallback |
 | 1.3.3 | "Saved" label placed from real positions (was hidden behind Restore defaults); CI concurrency fix |
 | 1.3.4 | Main window reopens where it was last closed (`MainWindowPosition`, centred if off-screen) |
-| 1.3.5 | Accessibility fixes from a UI review: Queue/minute fields named for screen readers; invalid URL error shown as text under the field (was an ErrorProvider icon); dark day-strip red `#F25F55` (3.5:1 against grey). Not yet checked on Igor's PC at 125 % |
+| 1.3.5 | Accessibility fixes from a UI review: Queue/minute fields named for screen readers; invalid URL error shown as text under the field (was an ErrorProvider icon); dark day-strip red `#F25F55` (3.5:1 against grey) |
+| 1.4.0 | Issue #1 Windows 11 redesign (approved mockup) + UI language switch, queue help dialog, main-window links (Графіки, Facebook), Donations from donations.json with favicons. Checked with `shots.cmd ... windows` on Igor's PC (uk-UA and en-US, both themes, 100 %); not yet at 125 %/150 % or on Windows 10 |
 
 ## 7. Open items
 
-1. **Issue #1 - UI redesign to Windows 11 design principles** (opened by Igor 2026-10-30, not started):
-   "Colors, fonts, buttons with glyphs only no contours, frosted glass translucent windows, no window header,
-   fonts and colors for dark and light themes" - https://learn.microsoft.com/en-us/windows/apps/design/design-principles
-   Notes for planning (not yet agreed with Igor):
-   - Frosted glass = Mica/Acrylic via `DwmSetWindowAttribute(DWMWA_SYSTEMBACKDROP_TYPE = 38)`, Windows 11 22H2+
-     only; WinForms paints opaque backgrounds, so it needs `DwmExtendFrameIntoClientArea` and transparent
-     painting - feasible but fiddly; must degrade to a solid colour on Windows 10.
-   - "No window header" = borderless form with own caption area: drag (`WM_NCHITTEST` -> `HTCAPTION`), close
-     button, keyboard/Alt+F4, rounded corners (`DWMWA_WINDOW_CORNER_PREFERENCE = 33`), still DPI-correct.
-   - Glyph-only buttons: Segoe Fluent Icons (Win11) / Segoe MDL2 Assets (Win10) without borders, with hover/
-     pressed fills; font Segoe UI Variable on Win11, Segoe UI on Win10.
-   - Must stay single exe, C# 5, .NET 4.6.2 - no WinUI/WPF. Make a mockup first and ask Igor to confirm.
-   - A UI review (2026-11-02) also found, still open: light theme uses classic `#F0F0F0` + 3D borders while
-     dark is flat (two styles); one GroupBox frame per window that groups nothing; one screen named
-     "Параметри" and "Налаштування"; "Збережено" not announced to screen readers; day strip has no
-     accessible text; "За замовчуванням" / "Тестове сповіщення" are not verbs; light links are `#0000FF`.
-   - Mockup (2026-11-03, awaiting Igor's approval): https://claude.ai/artifact/PgYuaq5LWNUiCPP4316ogB
-   - Four features agreed 2026-11-03, to be built **inside the redesign** (reason: match the Android app,
-     https://github.com/IgorZaharov/Android-ZTBlackoutPreWarning):
-     1. UI language switch in Preferences (Як у Windows / Українська / English); first start follows the
-        Windows UI language. Needs a registry value and switching `Strings` at run time.
-     2. "Як дізнатися свою чергу" link on the Queue row opening a dialog with the 4 steps from the Android
-        app's help (search page, pick РЕМ/town/street, read "Черга"/"Підчерга", choose it in "Черга").
-     3. Main window links: "Графіки" https://www.ztoe.com.ua/unhooking-search.php and
-        "Житомиробленерго на Facebook" https://www.facebook.com/ztoe.com.ua
-     4. `donations.json` in this repo (same shape and links as the Android repo's `public/donations.json`:
-        `[{"title","url"}]`), downloaded from GitHub at every start and shown in About under a section named
-        exactly "Donations", each link with its site's favicon. Ask before caching favicons on disk.
+1. **Issue #1 - Windows 11 redesign**: built in 1.4.0 from the approved mockup
+   (https://claude.ai/artifact/PgYuaq5LWNUiCPP4316ogB), together with the four features Igor asked for to
+   match the Android app (language switch, queue help, main-window links, Donations). Decisions: the system
+   title bar is kept but takes the window colour (Mica on 22H2+); no borderless window. "Donations" is the
+   section title in both languages (Igor's wording). Favicons are memory only: ask before caching on disk.
+   savelife.in.ua answers 403 to automated requests, so its icon is a letter tile; do not try to get around it.
+   Still to check: 125 % and 150 % scaling, Windows 10, Narrator on the new controls; then close issue #1.
 2. Optional, never requested: code signing (Azure Trusted Signing) to stop SmartScreen/Chrome download
    warnings for the unsigned exe.
 3. Optional: clicking a toast does not open the app window (would need a COM activator / protocol).
@@ -168,10 +156,7 @@ Registry values (`HKCU\Software\UABlackoutPreWarning`): `ScheduleUrl`, `Queue`, 
 
 ## 8. Next steps
 
-1. Confirm with Igor that v1.3.4 works on his PC (window position, "Saved" label at 125 %, single
-   notification, memory drop in Task Manager).
-2. Start issue #1: read the Microsoft design principles page, propose a concrete look (mockup of main,
-   Preferences and About in light and dark), list what is Windows 11-only and the Windows 10 fallback, and
-   get Igor's approval before coding.
-3. After implementation: screenshots workflow (`uk-UA`), update README images and `docs/DESIGN.md`, bump version
-   (likely 1.4.0 or 2.0.0), Igor publishes, verify the release.
+1. Push `main` (donations.json must be on GitHub before the app can show the Donations section).
+2. Igor tries 1.4.0 on his PC at his usual scaling (125 %): all windows, both themes, both languages,
+   the language switch, queue help, links, Donations; Narrator on Preferences.
+3. Igor publishes v1.4.0; verify the release (see section 4) and close issue #1.

@@ -49,6 +49,12 @@ namespace UABlackoutPreWarning.Tests
             Run("Strings: both languages complete", StringsComplete);
             Run("Strings: formatting", StringsFormat);
             Run("Kyiv clock", KyivClockWorks);
+            Run("Settings: UI language", SettingsLanguage);
+            Run("Strings: day strip description", StripDescription);
+            Run("Donations: Android file format", DonationsAndroidFormat);
+            Run("Donations: escapes, extra fields, invalid entries", DonationsFiltering);
+            Run("Donations: malformed text gives an empty list", DonationsMalformed);
+            Run("Donations: repository donations.json is valid", DonationsRepoFile);
 
             Console.WriteLine();
             Console.WriteLine("{0} passed, {1} failed", passed, failed);
@@ -389,6 +395,71 @@ namespace UABlackoutPreWarning.Tests
             // 28.10.2026 is after the October DST change: Kyiv = UTC+2.
             Equal(new DateTime(2026, 10, 28, 14, 0, 0), KyivClock.FromUtc(new DateTime(2026, 10, 28, 12, 0, 0)), "winter time");
             Equal(new DateTime(2026, 7, 1, 15, 0, 0), KyivClock.FromUtc(new DateTime(2026, 7, 1, 12, 0, 0)), "summer time");
+        }
+
+        private static void SettingsLanguage()
+        {
+            var s = new AppSettings();
+            Equal(AppSettings.LanguageAuto, s.Language, "follows Windows by default");
+            s.Language = "de";
+            s.Normalize();
+            Equal(AppSettings.LanguageAuto, s.Language, "unknown language reset");
+            s.Language = AppSettings.LanguageEnglish;
+            s.Normalize();
+            Equal("en", s.Language, "English kept");
+            True(Strings.ForLanguage(AppSettings.LanguageUkrainian).IsUkrainian, "uk picks Ukrainian");
+            True(!Strings.ForLanguage(AppSettings.LanguageEnglish).IsUkrainian, "en picks English");
+            Equal(Strings.Current().IsUkrainian, Strings.ForLanguage(AppSettings.LanguageAuto).IsUkrainian, "auto follows Windows");
+        }
+
+        private static void StripDescription()
+        {
+            var slots = new bool[48];
+            for (int i = 18; i < 24; i++) slots[i] = true;      // 09:00-12:00
+            for (int i = 44; i < 48; i++) slots[i] = true;      // 22:00-24:00
+            Equal("Сьогодні без світла: 09:00–12:00, 22:00–24:00", Strings.Ukrainian().StripDescription(slots), "uk ranges");
+            Equal("No blackouts scheduled today", Strings.English().StripDescription(new bool[48]), "en none");
+            Equal(Strings.English().NoGridForToday, Strings.English().StripDescription(null), "no grid");
+        }
+
+        private static void DonationsAndroidFormat()
+        {
+            var list = DonationList.Parse("[\n  {\n    \"title\": \"Допомога тваринам\",\n    \"url\": \"https://send.monobank.ua/jar/7vJA5xrLoV\"\n  },\n" +
+                                          "  {\n    \"title\": \"Фонд Повернись Живим\",\n    \"url\": \"https://savelife.in.ua/donate/\"\n  }\n]\n");
+            Equal(2, list.Count, "entries");
+            Equal("Допомога тваринам", list[0].Title, "first title");
+            Equal("https://send.monobank.ua/jar/7vJA5xrLoV", list[0].Url, "first url");
+            Equal("send.monobank.ua", list[0].Host, "first host");
+            Equal("savelife.in.ua", list[1].Host, "second host");
+        }
+
+        private static void DonationsFiltering()
+        {
+            var list = DonationList.Parse("﻿[{\"title\":\"A \\\"quoted\\\" \\u0414\\u202E\",\"url\":\"https://www.example.org/x\",\"order\":1,\"on\":true," +
+                                          "\"tags\":[\"a\",[1,2],{\"k\":null}],\"icon\":{\"src\":\"x.png\",\"size\":[16,32]}}," +
+                                          "{\"title\":\"plain http\",\"url\":\"http://example.org\"}," +
+                                          "{\"title\":\"script\",\"url\":\"javascript:alert(1)\"}," +
+                                          "{\"title\":\"  \",\"url\":\"https://example.org\"}," +
+                                          "{\"url\":\"https://example.org\"}]");
+            Equal(1, list.Count, "only the valid https entry; nested fields skipped");
+            Equal("A \"quoted\" Д", list[0].Title, "escapes decoded, bidi override removed");
+            Equal("example.org", list[0].Host, "www. dropped from host");
+            Equal(0, DonationList.Parse("[]").Count, "empty array");
+        }
+
+        private static void DonationsMalformed()
+        {
+            Equal(0, DonationList.Parse("").Count, "empty text");
+            Equal(0, DonationList.Parse("<html>404</html>").Count, "HTML error page");
+            Equal(0, DonationList.Parse("[{\"title\":\"x\",\"url\":\"https://a.b\"}").Count, "unterminated array");
+            Equal(0, DonationList.Parse("{\"title\":\"x\"}").Count, "object, not array");
+        }
+
+        private static void DonationsRepoFile()
+        {
+            var path = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetFullPath(fixtures))), "donations.json");
+            var list = DonationList.Parse(File.ReadAllText(path, Encoding.UTF8));
+            True(list.Count > 0, "donations.json has valid entries: " + path);
         }
 
         // ---- mini framework -----------------------------------------------------

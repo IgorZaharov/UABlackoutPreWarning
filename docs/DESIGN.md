@@ -1,4 +1,4 @@
-# UABlackoutPreWarning — Design (as built, v1.3.5)
+# UABlackoutPreWarning — Design (as built, v1.4.0)
 
 UABlackoutPreWarning is a portable Windows tray utility. It reads the Zhytomyroblenergo (ZTOE) outage
 schedule and warns the user a set number of minutes before each scheduled blackout, so work can be
@@ -6,6 +6,7 @@ saved on a PC without a UPS. User documentation (Ukrainian) is in [README.md](..
 
 - **Deliverable:** one `UABlackoutPreWarning.exe` (~200 KB), no installer, no files beside it. At run time it
   writes only the registry and one toast icon (`%LOCALAPPDATA%\UABlackoutPreWarning\toast-icon.png`).
+  At start-up it also reads `donations.json` from this repository on GitHub (kept in memory only).
 - **Runs on:** clean Windows 10 (1607+) and Windows 11, x86 and x64. Needs only the .NET Framework 4.6.2+
   that ships with Windows.
 - **Licence:** GNU GPL v3.
@@ -39,7 +40,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | ID | Requirement |
 | --- | --- |
 | F1 | Tray icon. Right-click menu: Open, Check now, About, Close Application. Double-click opens the main window. |
-| F2 | Main window: status, plus gear (settings), "?" (about) and the Day/Night switch. Separate settings window: schedule URL, queue drop-down, warning lead time, refresh interval, Start with Windows, Restore defaults, Check now, Save. |
+| F2 | Main window: queue, gear (Preferences), "?" (About) and the dark-theme switch; status card with today's strip; site notice; links "Графіки" (`https://www.ztoe.com.ua/unhooking-search.php`) and "Житомиробленерго на Facebook" (`https://www.facebook.com/ztoe.com.ua`). Separate Preferences window in three sections: Графік (schedule URL, queue), Сповіщення (lead time, refresh interval, test notification), Система (UI language, Start with Windows, Restore defaults); Check now and Save at the bottom. |
 | F3–F4 | Download and parse on start, then every refresh interval. |
 | F5 | Consecutive red slots form one blackout series. |
 | F6 | One notification per series, X minutes before it starts. |
@@ -49,9 +50,12 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | F10 | Start with Windows via the per-user Run key. |
 | F11 | Standard Windows notification sound. Each warning is a toast (the tray balloon only if the toast fails); the toast uses the reminder scenario (stays on screen until dismissed) and is kept in the Notifications panel. |
 | F15 | "Test notification" in the settings window: the same notification for the nearest blackout in the saved queue, marked "Тест:", not remembered (NotifiedSeries unchanged). |
-| F13 | Day/Night switch (sun/moon) in the main window: light or dark theme for all windows and the tray menu, applied and saved at once without Save. |
-| F14 | About window: description, version, links to the author, the manual (README) and GitHub Issues. |
-| F12 | UI language follows Windows: Ukrainian, otherwise English. |
+| F13 | Dark-theme switch (moon) in the main window: light or dark theme for all windows and the tray menu, applied and saved at once without Save. |
+| F14 | About window: description, version, links to the author, the manual (README) and GitHub Issues, and a section titled "Donations" (in both languages). |
+| F12 | UI language: Preferences "Мова інтерфейсу" with Як у Windows (default: Ukrainian if the Windows display language is Ukrainian, otherwise English), Українська, English. Applied on Save: the tray menu and the open windows are rebuilt in the new language at the same place. |
+| F16 | Queue row in Preferences: link "Як дізнатися свою чергу" opens a dialog with the four steps of the Android app's help. |
+| F17 | Donations: `donations.json` in this repository (the Android app's format, `[{"title","url"}]`) is read from `raw.githubusercontent.com/…/main/donations.json` at every start; About lists each https link with its site's favicon (`/favicon.ico`, else the page's `<link rel="icon">`, else a letter tile). Offline or no file: no Donations section. |
+| F18 | Windows 11 look (issue #1): Fluent colours and type ramp, 4 px cards and controls, borderless icon buttons, accent only on Save and links; title bar blended with the window (Mica on 22H2+, caption colour on 21H2, plain dark/light title bar on Windows 10). |
 
 ## Architecture
 
@@ -68,6 +72,9 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | In-code string tables | No `.resx` satellite assemblies (they would be extra DLLs) |
 | Memory trim when idle | 5 s after a download, notification or closed window (and only with no window open): full GC and `SetProcessWorkingSetSize(-1, -1)`. Working set goes from ~65 MB to ~4–9 MB in the tray; windows are closed (not hidden) and rebuilt on open |
 | Kyiv time zone | Schedule times are converted through `FLE Standard Time`, so a PC in another zone still warns correctly |
+| Own controls for the Windows 11 look | WinForms has no Fluent controls and WinUI/WPF would break the single-exe rule: cards, buttons, the toggle switch, the field frame and the drop-down are owner-drawn in `Theme.cs`; native controls stay underneath where they exist (Button, CheckBox, ComboBox, TextBox, NumericUpDown), so keyboard and screen readers work as before |
+| Layout in real pixels | The app is system-DPI aware, so one factor (system DPI / 96) holds for the run: windows use `AutoScaleMode.None` and place controls with `Ui.S(...)` from measured text. WinForms auto-scaling misplaced controls at 125 % twice before |
+| Hand-written JSON reader for donations | `DonationList` reads only the small array the file needs; no JSON library or extra framework reference |
 
 ### Components
 
@@ -77,15 +84,17 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | `src/Core/Schedule.cs` | `SeriesBuilder` | Red slots → series, midnight join across days, current/next series | Yes |
 | `src/Core/Schedule.cs` | `WarningPlanner` | Which warnings are due; remembers the last 20 warned series | Yes |
 | `src/Core/Schedule.cs` | `KyivClock`, `PageDecoder` | Kyiv wall-clock time; charset detection (header, meta, cp1251) | Yes |
-| `src/Core/Settings.cs` | `AppSettings` | Defaults, ranges, normalisation, queue list | Yes |
-| `src/Core/Strings.cs` | `Strings` | Ukrainian and English text, time/duration formatting | Yes |
-| `src/App/TrayContext.cs` | `TrayContext` | Tray icon, menu, timers, downloads, warnings, tooltip, sleep/resume | No |
-| `src/App/MainForm.cs` | `MainForm`, `DayStrip`, `Glyphs` | Main window: toolbar (Segoe MDL2 gear and "?" icons), status area, day strip (24 hour blocks, labels every 2 h) | No |
-| `src/App/SettingsForm.cs` | `SettingsForm` | Settings window: fields, validation, Restore defaults, Save; opens over the main window, one at a time | No |
-| `src/App/Theme.cs` | `Theme`, `ThemedGroupBox`, `ThemeToggle` | Light/dark colour sets applied in place, dark group frames, the switch, dark title bar (DWM), dark tray menu | No |
-| `src/App/AboutForm.cs` | `AboutForm` | Name, version, description, links to the author, the manual and Issues | No |
+| `src/Core/Settings.cs` | `AppSettings` | Defaults, ranges, normalisation, queue list, UI language | Yes |
+| `src/Core/Strings.cs` | `Strings` | Ukrainian and English text, language choice, time/duration formatting, the day strip's spoken text | Yes |
+| `src/Core/Donations.cs` | `DonationList`, `DonationLink` | Reads donations.json; keeps only titled https links | Yes |
+| `src/App/TrayContext.cs` | `TrayContext` | Tray icon, menu, timers, downloads, warnings, tooltip, sleep/resume, language change, donations download | No |
+| `src/App/MainForm.cs` | `MainForm`, `DayStrip` | Main window: toolbar (Segoe Fluent/MDL2 glyphs), status card, day strip (24 hour blocks, labels every 2 h, spoken as text), site notice, links | No |
+| `src/App/SettingsForm.cs` | `SettingsForm`, `StatusLabel` | Preferences: sections of cards, validation (error text under the address), Restore defaults, Save ("Saved" announced); opens over the main window, one at a time | No |
+| `src/App/QueueHelpForm.cs` | `QueueHelpForm` | "Як дізнатися свою чергу" dialog | No |
+| `src/App/Theme.cs` | `Theme`, `Ui`, `Card`, `FluentButton`, `ToggleSwitch`, `FieldHost`, `FluentCombo` | Windows 11 colours applied in place, fonts and pixel scale, the owner-drawn controls, title bar and Mica (DWM), tray menu | No |
+| `src/App/AboutForm.cs` | `AboutForm` | Name, version, description, links to the author, the manual and Issues, Donations | No |
 | `src/App/Toasts.cs` | `Toasts` | AppUserModelID registration, toast icon file, toast XML, show via WinRT | No |
-| `src/App/Platform.cs` | `RegistrySettingsStore`, `Autostart`, `ScheduleFetcher` | Registry, Run key, HTTP download | No |
+| `src/App/Platform.cs` | `RegistrySettingsStore`, `Autostart`, `Http`, `ScheduleFetcher`, `DonationFetcher`, `AppInfo` | Registry, Run key, HTTP download, donations and favicons, links | No |
 | `src/App/Program.cs` | `Program` | Single instance, DPI awareness, TLS 1.2, start-up | No |
 
 Two timers drive the app: the refresh timer downloads and parses the page; a separate 30-second timer
@@ -123,7 +132,8 @@ already known.
 | `StartWithWindows` | REG_DWORD | 0 | Checkbox |
 | `KnownQueues` | REG_SZ | `1.1;…;6.2` | Row labels last seen on the page |
 | `NotifiedSeries` | REG_SZ | empty | Last 20 warned series |
-| `DarkTheme` | REG_DWORD | 0 | Day/Night switch; saved the moment it is clicked |
+| `DarkTheme` | REG_DWORD | 0 | Dark-theme switch; saved the moment it is clicked |
+| `Language` | REG_SZ | empty | UI language: empty = as Windows, `uk`, `en` |
 | `MainWindowPosition` | REG_SZ | not set | "x,y" of the main window when it was last closed; ignored if no longer on any screen |
 
 Start with Windows writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\UABlackoutPreWarning`
@@ -137,8 +147,13 @@ Start with Windows writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\UA
 | `build.sh` | Linux/macOS with Mono | Development build (no manifest; DPI awareness is also set in code) and tests |
 | GitHub Actions | `windows-latest` | `build.cmd` on every push; a `v*` tag or a published release gets `UABlackoutPreWarning.zip` attached |
 
-`tests/Core.Tests` is a dependency-free test runner (23 tests) covering the fixture, synthetic markup
-(no `<tbody>`, `bgcolor`, multiple days, malformed rows), planner rules, settings and strings.
+`tests/Core.Tests` is a dependency-free test runner (29 tests) covering the fixture, synthetic markup
+(no `<tbody>`, `bgcolor`, multiple days, malformed rows), planner rules, settings, strings, the language
+choice and donations.json (including the repository's own file).
+
+`tools\screenshots\shots.cmd <culture> <folder> windows` opens every window in both themes on a real desktop,
+plus the queue help and a language switch, and saves PNGs (no toast); it uses the working copy's
+`donations.json`, so the Donations section can be checked before the file is pushed.
 
 Manual test matrix before a release: Windows 10 22H2 x86 and x64, Windows 10 LTSC 2019 x64, Windows 11
 x64 at 100 % and 150 % scaling. Check: start from Downloads (SmartScreen), one toast with sound, no repeat
@@ -153,3 +168,5 @@ after restart, stale notice with the network unplugged, Start with Windows on an
 | Site slow or down | Last good schedule kept; retries; stale notice |
 | Unsigned exe | SmartScreen prompt on first run (README explains); code signing optional |
 | Do Not Disturb / Focus Assist | Toast may be hidden; README explains |
+| A donation site blocks automated requests (savelife.in.ua answers 403) | Its favicon falls back to a letter tile; the link itself still works |
+| donations.json edited by mistake | Only titled https links are shown; malformed JSON shows no section; a test checks the repository file |

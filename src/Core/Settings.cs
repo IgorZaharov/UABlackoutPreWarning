@@ -17,6 +17,9 @@ namespace UABlackoutPreWarning.Core
         public const int MinLead = 1, MaxLead = 120;
         public const int MinRefresh = 5, MaxRefresh = 240;
 
+        /// <summary>Values of <see cref="Language"/>: follow Windows (default), Ukrainian or English.</summary>
+        public const string LanguageAuto = "", LanguageUkrainian = "uk", LanguageEnglish = "en";
+
         public static readonly string[] DefaultQueues =
         {
             "1.1", "1.2", "2.1", "2.2", "3.1", "3.2", "4.1", "4.2", "5.1", "5.2", "6.1", "6.2"
@@ -30,6 +33,7 @@ namespace UABlackoutPreWarning.Core
             RefreshMinutes = DefaultRefreshMinutes;
             StartWithWindows = false;
             DarkTheme = false;
+            Language = LanguageAuto;
             KnownQueues = string.Join(";", DefaultQueues);
             NotifiedSeries = "";
         }
@@ -42,6 +46,9 @@ namespace UABlackoutPreWarning.Core
 
         /// <summary>Dark colours for the window and tray menu (the Day/Night switch).</summary>
         public bool DarkTheme { get; set; }
+
+        /// <summary>UI language: <see cref="LanguageAuto"/> follows the Windows display language.</summary>
+        public string Language { get; set; }
 
         /// <summary>Row labels last seen on the page, semicolon-separated.</summary>
         public string KnownQueues { get; set; }
@@ -65,6 +72,7 @@ namespace UABlackoutPreWarning.Core
             if (RefreshMinutes < MinRefresh || RefreshMinutes > MaxRefresh) RefreshMinutes = DefaultRefreshMinutes;
             if (ParseQueues(KnownQueues).Count == 0) KnownQueues = string.Join(";", DefaultQueues);
             if (NotifiedSeries == null) NotifiedSeries = "";
+            if (Language != LanguageUkrainian && Language != LanguageEnglish) Language = LanguageAuto;
         }
 
         /// <summary>Queue labels for the drop-down; always contains the selected queue.</summary>

@@ -36,7 +36,7 @@ namespace UABlackoutPreWarning
         private static readonly int[] RetryMinutes = { 1, 2, 5 };
         private const int StaleAfterFailures = 3;
 
-        private readonly Strings S = Strings.Current();
+        private Strings S;
         private Theme theme = Theme.LightTheme;
         private readonly RegistrySettingsStore store = new RegistrySettingsStore();
         private readonly WarningPlanner planner = new WarningPlanner();
@@ -62,6 +62,7 @@ namespace UABlackoutPreWarning
         private int failures;
         private bool staleNotified;
         private bool disposed;
+        private List<DonationEntry> donations;      // null until donations.json has been read
 
         public TrayContext(EventWaitHandle showEvent)
         {
@@ -76,19 +77,12 @@ namespace UABlackoutPreWarning
 
             bool firstRun;
             settings = store.Load(out firstRun);
+            S = Strings.ForLanguage(settings.Language);
             planner.Load(settings.NotifiedSeries);
             theme = Theme.For(settings.DarkTheme);
 
             menu = new ContextMenuStrip();
-            var open = new ToolStripMenuItem(S.MenuOpen, null, delegate { ShowWindow(); });
-            open.Font = new Font(open.Font, FontStyle.Bold);
-            menu.Items.Add(open);
-            menu.Items.Add(new ToolStripMenuItem(S.MenuCheckNow, null, delegate { RefreshNow(); }));
-            menu.Items.Add(new ToolStripMenuItem(S.MenuAbout, null, delegate { ShowAbout(); }));
-            menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(new ToolStripMenuItem(S.MenuClose, null, delegate { ExitApplication(); }));
-
-            theme.ApplyMenu(menu);
+            BuildMenu();
 
             tray = new NotifyIcon();
             tray.Icon = AppInfo.LoadIcon(SystemInformation.SmallIconSize);
@@ -111,6 +105,7 @@ namespace UABlackoutPreWarning
 
             SystemEvents.PowerModeChanged += OnPowerModeChanged;
             SystemEvents.TimeChanged += OnTimeChanged;
+            SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
 
             showWait = ThreadPool.RegisterWaitForSingleObject(showEvent, delegate
             {
@@ -128,6 +123,63 @@ namespace UABlackoutPreWarning
 
             RefreshNow();
             Evaluate();
+            LoadDonations();
+        }
+
+        /// <summary>Tray menu items in the current language and theme.</summary>
+        private void BuildMenu()
+        {
+            var old = new ToolStripItem[menu.Items.Count];
+            menu.Items.CopyTo(old, 0);
+            menu.Items.Clear();
+            foreach (var item in old) item.Dispose();
+            var open = new ToolStripMenuItem(S.MenuOpen, null, delegate { ShowWindow(); });
+            menu.Items.Add(open);
+            menu.Items.Add(new ToolStripMenuItem(S.MenuCheckNow, null, delegate { RefreshNow(); }));
+            menu.Items.Add(new ToolStripMenuItem(S.MenuAbout, null, delegate { ShowAbout(); }));
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(new ToolStripMenuItem(S.MenuClose, null, delegate { ExitApplication(); }));
+            theme.ApplyMenu(menu);
+            open.Font = Ui.BodyStrong;
+        }
+
+        // ---- donations ---------------------------------------------------------
+
+        /// <summary>Reads donations.json from GitHub (and the sites' favicons) in the background, once per start.</summary>
+        private void LoadDonations()
+        {
+            if (!LoadDonationsAtStart) return;
+            int iconSize = Ui.S(16);
+            Task.Factory.StartNew(delegate { return DonationFetcher.Load(iconSize); },
+                    CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)
+                .ContinueWith(delegate(Task<List<DonationEntry>> t)
+                {
+                    if (!t.IsFaulted) UseDonations(t.Result);      // offline or no file: About shows no Donations section
+                }, CancellationToken.None, TaskContinuationOptions.None, uiScheduler);
+        }
+
+        /// <summary>Keeps the donation links for the About window (also used by the screenshot tool).</summary>
+        internal void UseDonations(List<DonationEntry> list)
+        {
+            if (disposed)
+            {
+                DisposeIcons(list);
+                return;
+            }
+            var previous = donations;
+            donations = list;
+            if (about != null && !about.IsDisposed) about.ShowDonations(donations);   // stops showing the old icons
+            DisposeIcons(previous);
+            RequestTrim();
+        }
+
+        /// <summary>The screenshot tool turns this off and supplies the working copy's donations.json instead.</summary>
+        internal static bool LoadDonationsAtStart = true;
+
+        private static void DisposeIcons(List<DonationEntry> list)
+        {
+            if (list == null) return;
+            foreach (var d in list) if (d.Icon != null) d.Icon.Dispose();
         }
 
         // ---- window ------------------------------------------------------------
@@ -204,7 +256,7 @@ namespace UABlackoutPreWarning
             if (disposed) return;
             if (about == null || about.IsDisposed)
             {
-                about = new AboutForm(S, theme);
+                about = new AboutForm(S, theme, donations);
                 about.FormClosed += delegate { RequestTrim(); };
             }
             if (!about.Visible) about.Show();
@@ -217,7 +269,28 @@ namespace UABlackoutPreWarning
             if (settings.DarkTheme == dark) return;
             settings.DarkTheme = dark;
             TrySave();
-            theme = Theme.For(dark);
+            ApplyThemeEverywhere();
+        }
+
+        /// <summary>Windows colour settings changed (e.g. High Contrast turned on or off): recolour everything.</summary>
+        private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+        {
+            if (e.Category == UserPreferenceCategory.Color || e.Category == UserPreferenceCategory.Accessibility ||
+                e.Category == UserPreferenceCategory.General)
+            {
+                RunOnUi(delegate
+                {
+                    var next = Theme.For(settings.DarkTheme);
+                    if (next == theme) return;      // the same fixed light or dark set
+                    ApplyThemeEverywhere();
+                });
+            }
+        }
+
+        private void ApplyThemeEverywhere()
+        {
+            if (disposed) return;
+            theme = Theme.For(settings.DarkTheme);
             theme.ApplyMenu(menu);
             if (form != null && !form.IsDisposed) form.ApplyTheme(theme);
             if (settingsForm != null && !settingsForm.IsDisposed) settingsForm.ApplyTheme(theme);
@@ -231,6 +304,7 @@ namespace UABlackoutPreWarning
             bool urlChanged = !string.Equals(updated.ScheduleUrl, settings.ScheduleUrl, StringComparison.Ordinal);
             bool refreshChanged = updated.RefreshMinutes != settings.RefreshMinutes;
             bool autostartChanged = updated.StartWithWindows != settings.StartWithWindows;
+            bool languageChanged = updated.Language != settings.Language;
 
             updated.KnownQueues = settings.KnownQueues;
             updated.DarkTheme = settings.DarkTheme;     // the Day/Night switch saves itself
@@ -251,6 +325,41 @@ namespace UABlackoutPreWarning
                 RestartRefreshTimer();
             }
             Evaluate();
+            if (languageChanged) RunOnUi(ChangeLanguage);   // after the Save click handler has returned
+        }
+
+        /// <summary>
+        /// Switches the UI language: the tray menu is rebuilt and the open windows are closed and opened again
+        /// in the new language at the same place (the settings are saved, so nothing is lost).
+        /// </summary>
+        private void ChangeLanguage()
+        {
+            if (disposed) return;
+            S = Strings.ForLanguage(settings.Language);
+            BuildMenu();
+
+            bool mainOpen = IsOpen(form), settingsOpen = IsOpen(settingsForm), aboutOpen = IsOpen(about);
+            var settingsAt = settingsOpen ? settingsForm.Location : Point.Empty;
+            var aboutAt = aboutOpen ? about.Location : Point.Empty;
+            if (settingsForm != null && !settingsForm.IsDisposed) settingsForm.Close();
+            if (about != null && !about.IsDisposed) about.Close();
+            if (form != null && !form.IsDisposed) form.Close();
+
+            // Reopen in this order so Preferences, where Save was pressed, ends up in front with focus on Save.
+            if (mainOpen) ShowWindow();
+            if (aboutOpen)
+            {
+                ShowAbout();
+                about.Location = aboutAt;
+            }
+            if (settingsOpen)
+            {
+                ShowSettings();
+                settingsForm.Location = settingsAt;
+                settingsForm.ShowSaved();
+                settingsForm.FocusSave();
+            }
+            UpdateViews(KyivClock.Now, null);
         }
 
         public void RefreshNow()
@@ -510,7 +619,7 @@ namespace UABlackoutPreWarning
 
                 if (page.NoticeLines.Count > 0)
                 {
-                    v.Notice = string.Format(S.SiteNotice, string.Join(" · ", page.NoticeLines.ToArray()));
+                    v.Notice = string.Join(" · ", page.NoticeLines.ToArray());
                 }
             }
 
@@ -611,6 +720,7 @@ namespace UABlackoutPreWarning
                 disposed = true;
                 SystemEvents.PowerModeChanged -= OnPowerModeChanged;
                 SystemEvents.TimeChanged -= OnTimeChanged;
+                SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
                 showWait.Unregister(null);
                 warnTimer.Dispose();
                 refreshTimer.Dispose();
@@ -621,6 +731,7 @@ namespace UABlackoutPreWarning
                 menu.Dispose();
                 if (form != null) form.Dispose();
                 if (about != null) about.Dispose();
+                DisposeIcons(donations);
                 if (settingsForm != null) settingsForm.Dispose();
                 invoker.Dispose();
             }

@@ -45,30 +45,60 @@ namespace UABlackoutPreWarning
             System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            Application.ThreadException += delegate(object sender, ThreadExceptionEventArgs e)
+            {
+                Console.Error.WriteLine("Unhandled: {0}", e.Exception);
+            };
 
+            TrayContext.LoadDonationsAtStart = !File.Exists("donations.json");   // the local file is used below
             app = new TrayContext(new EventWaitHandle(false, EventResetMode.AutoReset));
 
             // (seconds to wait before the step, step)
             var steps = new List<KeyValuePair<int, MethodInvoker>>();
-            if (args.Length > 2 && args[2] == "memory")
+            string mode = args.Length > 2 ? args[2] : "";
+            if (mode == "memory")
             {
                 MemorySteps(steps);
                 return Run(steps);
             }
-            steps.Add(Step(1, delegate { CloseOthers(); app.SetDarkTheme(true); app.ShowWindow(); }));
-            steps.Add(Step(25, delegate { Save(Find<MainForm>(), "main-window-dark"); }));     // time for the download
-            steps.Add(Step(1, delegate { app.ShowSettings(); }));
-            steps.Add(Step(3, delegate { Save(Find<SettingsForm>(), "settings-window-dark"); }));
-            steps.Add(Step(1, delegate { Find<SettingsForm>().AcceptButton.PerformClick(); }));     // Save
-            steps.Add(Step(1, delegate { Save(Find<SettingsForm>(), "settings-saved-dark"); }));
-            steps.Add(Step(1, delegate { CloseOthers(); app.ShowAbout(); }));
-            steps.Add(Step(3, delegate { Save(Find<AboutForm>(), "about-window-dark"); }));
-            steps.Add(Step(1, delegate { CloseOthers(); app.SetDarkTheme(false); app.ShowWindow(); }));
-            steps.Add(Step(3, delegate { Save(Find<MainForm>(), "main-window-light"); }));
-            steps.Add(Step(1, delegate { app.ShowSettings(); }));
-            steps.Add(Step(3, delegate { Save(Find<SettingsForm>(), "settings-window-light"); }));
-            steps.Add(Step(1, delegate { CloseOthers(); app.ShowAbout(); }));
-            steps.Add(Step(3, delegate { Save(Find<AboutForm>(), "about-window-light"); }));
+            // donations.json from the working copy, so the section shows before the file is on GitHub.
+            if (File.Exists("donations.json"))
+            {
+                var json = File.ReadAllText("donations.json", System.Text.Encoding.UTF8);
+                steps.Add(Step(1, delegate { app.UseDonations(DonationFetcher.FromJson(json, Ui.S(16))); }));
+            }
+            foreach (var dark in new[] { true, false })
+            {
+                bool d = dark;
+                string suffix = d ? "-dark" : "-light";
+                steps.Add(Step(1, delegate { CloseOthers(); app.SetDarkTheme(d); app.ShowWindow(); }));
+                steps.Add(Step(d ? 25 : 3, delegate { Save(Find<MainForm>(), "main-window" + suffix); }));   // time for the download
+                steps.Add(Step(1, delegate { app.ShowSettings(); }));
+                steps.Add(Step(3, delegate { Save(Find<SettingsForm>(), "settings-window" + suffix); }));
+                steps.Add(Step(1, delegate { Find<SettingsForm>().AcceptButton.PerformClick(); }));     // Save
+                steps.Add(Step(1, delegate { Save(Find<SettingsForm>(), "settings-saved" + suffix); }));
+                steps.Add(Step(1, delegate
+                {
+                    // The help dialog is modal: open it from a posted call so this step (and the timer) can return.
+                    var settings = Find<SettingsForm>();
+                    settings.BeginInvoke((MethodInvoker)delegate { ClickLink(settings, "lnkQueueHelp"); });
+                }));
+                steps.Add(Step(2, delegate { var help = Find<QueueHelpForm>(); Save(help, "queue-help" + suffix); help.Close(); }));
+                steps.Add(Step(1, delegate { CloseOthers(); app.ShowAbout(); }));
+                steps.Add(Step(3, delegate { Save(Find<AboutForm>(), "about-window" + suffix); }));
+            }
+            if (mode == "windows")
+            {
+                // Language switch in Preferences: English, Save, then back to "Same as Windows".
+                steps.Add(Step(1, delegate { CloseOthers(); app.ShowSettings(); }));
+                steps.Add(Step(1, delegate { SetLanguage(Find<SettingsForm>(), 2); }));
+                steps.Add(Step(2, delegate { Save(Find<SettingsForm>(), "language-switched-settings"); }));
+                steps.Add(Step(1, delegate { Save(Find<MainForm>(), "language-switched-main"); }));
+                steps.Add(Step(1, delegate { SetLanguage(Find<SettingsForm>(), 0); }));
+                steps.Add(Step(2, delegate { CloseOthers(); app.ExitApplication(); }));
+                return Run(steps);
+            }
             // Blackout warning as a toast: on screen, then in the Notifications panel (Win+N).
             steps.Add(Step(1, delegate { CloseOthers(); Find<MainForm>().Hide(); }));
             steps.Add(Step(1, delegate
@@ -170,8 +200,26 @@ namespace UABlackoutPreWarning
             foreach (Form f in Application.OpenForms) open.Add(f);
             foreach (var f in open)
             {
-                if (f is SettingsForm || f is AboutForm) f.Close();
+                if (f is SettingsForm || f is AboutForm || f is QueueHelpForm) f.Close();
             }
+        }
+
+        /// <summary>Picks an entry of the language drop-down and presses Save, as a user would.</summary>
+        private static void SetLanguage(SettingsForm form, int index)
+        {
+            var combo = (ComboBox)form.GetType().GetField("cmbLanguage",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(form);
+            combo.SelectedIndex = index;
+            form.AcceptButton.PerformClick();
+        }
+
+        /// <summary>Raises LinkClicked on a form's LinkLabel field, as a click on it would.</summary>
+        private static void ClickLink(Form form, string field)
+        {
+            var link = (LinkLabel)form.GetType().GetField(field,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(form);
+            typeof(LinkLabel).GetMethod("OnLinkClicked", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .Invoke(link, new object[] { new LinkLabelLinkClickedEventArgs(link.Links.Count > 0 ? link.Links[0] : null) });
         }
 
         /// <summary>Saves the window as it appears on screen, title bar included.</summary>
@@ -190,18 +238,24 @@ namespace UABlackoutPreWarning
             Thread.Sleep(500);
             Application.DoEvents();
 
-            var r = FrameBounds(form);
-            using (var bmp = new Bitmap(r.Width, r.Height, PixelFormat.Format32bppArgb))
+            try
             {
-                using (var g = Graphics.FromImage(bmp))
+                var r = FrameBounds(form);
+                using (var bmp = new Bitmap(r.Width, r.Height, PixelFormat.Format32bppArgb))
                 {
-                    g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+                    using (var g = Graphics.FromImage(bmp))
+                    {
+                        g.CopyFromScreen(r.Location, Point.Empty, r.Size);
+                    }
+                    var path = Path.Combine(outDir, name + ".png");
+                    bmp.Save(path, ImageFormat.Png);
+                    Console.WriteLine("Saved {0} ({1}x{2})", path, r.Width, r.Height);
                 }
-                var path = Path.Combine(outDir, name + ".png");
-                bmp.Save(path, ImageFormat.Png);
-                Console.WriteLine("Saved {0} ({1}x{2})", path, r.Width, r.Height);
             }
-            form.TopMost = false;
+            finally
+            {
+                form.TopMost = false;   // a failed capture must not leave the window above the next one
+            }
         }
 
         private static void SaveScreen(string name)

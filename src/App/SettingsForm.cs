@@ -11,36 +11,49 @@ using UABlackoutPreWarning.Core;
 namespace UABlackoutPreWarning
 {
     /// <summary>
-    /// The settings window (opened with the gear button): schedule URL, queue, lead time, refresh
-    /// interval, Start with Windows. Nothing is applied until Save. Built in code (no designer files).
+    /// The Preferences window (opened with the gear button), laid out like Windows 11 Settings: sections of
+    /// cards, each with a title, a short hint and its control on the right. Nothing is applied until Save.
+    /// Built in code (no designer files); laid out in real pixels by <see cref="Arrange"/>.
     /// </summary>
     internal sealed class SettingsForm : Form
     {
+        private const int Width96 = 560;
+        private static readonly string[] LanguageValues =
+            { AppSettings.LanguageAuto, AppSettings.LanguageUkrainian, AppSettings.LanguageEnglish };
+
         private readonly Strings S;
         private readonly TrayContext app;
         private Theme T;
 
         private readonly TextBox txtUrl = new TextBox();
-        private readonly ComboBox cmbQueue = new ComboBox();
+        private readonly FieldHost urlField;
+        private readonly Label lblUrlTitle, lblUrlError;
+        private readonly Card urlCard = new Card();
+        private readonly FluentCombo cmbQueue = new FluentCombo(Ui.S(96));
+        private readonly LinkLabel lnkQueueHelp;
         private readonly NumericUpDown numLead = new NumericUpDown();
         private readonly NumericUpDown numRefresh = new NumericUpDown();
-        private readonly CheckBox chkAutostart = new CheckBox();
-        private readonly Button btnCheck = new Button();
-        private readonly Button btnSave = new Button();
-        private readonly Button btnDefaults = new Button();
-        private readonly Button btnTest = new Button();
-        private readonly Label lblSaved = new Label();
-        private readonly LinkLabel lnkAbout = new LinkLabel();
-        private readonly Label lblUrlError = new Label();
-        private GroupBox group;
-        private int urlErrorShift;   // real pixels the rows below the address are moved down while the error shows
-        private readonly ToolTip tips = new ToolTip();
+        private readonly FluentButton btnTest = new FluentButton(ButtonKind.Standard);
+        private readonly FluentCombo cmbLanguage = new FluentCombo(Ui.S(180));
+        private readonly ToggleSwitch chkAutostart = new ToggleSwitch();
+        private readonly FluentButton btnDefaults = new FluentButton(ButtonKind.Standard);
+        private readonly LinkLabel lnkAbout;
+        private readonly StatusLabel lblSaved = new StatusLabel();
+        private readonly FluentButton btnCheck = new FluentButton(ButtonKind.Standard);
+        private readonly FluentButton btnSave = new FluentButton(ButtonKind.Accent);
         private readonly Timer savedTimer = new Timer();
+        private bool urlErrorShown;     // Control.Visible reads false until the window is shown, so keep our own flag
 
-        // 96-DPI layout units; Windows scales them with AutoScaleMode.Dpi.
-        private const int GroupWidth = MainForm.GroupWidth;
-        private const int Inner = MainForm.Inner;
-        private const int Col2 = 152, Col3 = 292;
+        /// <summary>The window's blocks top-down: a section title (Label) or a row (Row).</summary>
+        private readonly List<object> blocks = new List<object>();
+
+        private sealed class Row
+        {
+            public Card Card;
+            public Label Title, Hint;
+            public LinkLabel Link;
+            public Control Control;
+        }
 
         public SettingsForm(Strings strings, TrayContext context, Theme theme)
         {
@@ -49,9 +62,8 @@ namespace UABlackoutPreWarning
             T = theme;
 
             SuspendLayout();
-            AutoScaleDimensions = new SizeF(96F, 96F);
-            AutoScaleMode = AutoScaleMode.Dpi;
-            Font = SystemFonts.MessageBoxFont;
+            AutoScaleMode = AutoScaleMode.None;
+            Font = Ui.Body;
             Text = S.SettingsTitle;
             Icon = AppInfo.LoadIcon(new Size(32, 32));
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -60,12 +72,65 @@ namespace UABlackoutPreWarning
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.Manual;
             KeyPreview = true;
-            ClientSize = new Size(GroupWidth + 24, 8 + 186 + 12);
 
-            group = BuildGroup(new Point(12, 8));
-            Controls.Add(group);
+            // Schedule.
+            Section(S.SectionSchedule);
+            lblUrlTitle = Ui.Label(S.LabelUrl, Ui.Body, null);
+            txtUrl.AccessibleName = S.LabelUrl;
+            urlField = new FieldHost(txtUrl, Ui.S(100));
+            lblUrlError = Ui.Label("", Ui.Caption, Theme.RoleWarn);   // shown after a failed Save (SetUrlError)
+            lblUrlError.Visible = false;
+            urlCard.Controls.AddRange(new Control[] { lblUrlTitle, urlField, lblUrlError });
+            Controls.Add(urlCard);
+            blocks.Add(urlCard);
 
+            cmbQueue.AccessibleName = S.LabelQueue;
+            lnkQueueHelp = Ui.Link(S.QueueHelpLink, Ui.Caption, null);
+            lnkQueueHelp.LinkClicked += delegate { ShowQueueHelp(); };
+            AddRow(S.LabelQueue, S.QueueHint, cmbQueue, lnkQueueHelp);
+
+            // Notifications.
+            Section(S.SectionNotifications);
+            AddRow(S.LabelLead, S.LeadHint, MinutesBox(numLead, AppSettings.MinLead, AppSettings.MaxLead, S.LabelLead), null);
+            AddRow(S.LabelRefresh, S.RefreshHint, MinutesBox(numRefresh, AppSettings.MinRefresh, AppSettings.MaxRefresh, S.LabelRefresh), null);
+            btnTest.Text = S.ButtonTest;
+            btnTest.FitWidth(96);
+            btnTest.Click += delegate { app.SendTestNotification(); };
+            AddRow(S.TestTitle, S.TestHint, btnTest, null);
+
+            // System.
+            Section(S.SectionSystem);
+            cmbLanguage.AccessibleName = S.LabelLanguage;
+            cmbLanguage.Items.AddRange(new object[] { S.LanguageAuto, Strings.UkrainianName, Strings.EnglishName });
+            AddRow(S.LabelLanguage, S.LanguageHint, cmbLanguage, null);
+            chkAutostart.Text = S.StartWithWindows;
+            chkAutostart.OnText = S.SwitchOn;
+            chkAutostart.OffText = S.SwitchOff;
+            chkAutostart.FitWidth();
+            var autostartRow = AddRow(S.StartWithWindows, null, chkAutostart, null);
+            autostartRow.Title.Click += delegate { chkAutostart.Checked = !chkAutostart.Checked; };
+            btnDefaults.Text = S.ButtonDefaults;
+            btnDefaults.FitWidth(96);
+            btnDefaults.Click += delegate { RestoreDefaults(); };
+            AddRow(S.DefaultsTitle, S.DefaultsHint, btnDefaults, null);
+
+            // Footer: About link and "Saved" on the left, Check now and Save on the right.
+            lnkAbout = Ui.Link(S.MenuAbout, Ui.Body, null);
+            lnkAbout.LinkClicked += delegate { app.ShowAbout(); };
+            lblSaved.Font = Ui.Body;
+            lblSaved.Tag = Theme.RoleSub;
+            lblSaved.UseMnemonic = false;
+            lblSaved.TextAlign = ContentAlignment.MiddleRight;
+            lblSaved.AutoEllipsis = true;
+            btnCheck.Text = S.ButtonCheckNow;
+            btnCheck.FitWidth(96);
+            btnCheck.Click += delegate { app.RefreshNow(); };
+            btnSave.Text = S.ButtonSave;
+            btnSave.FitWidth(96);
+            btnSave.Click += delegate { Save(); };
+            Controls.AddRange(new Control[] { lnkAbout, lblSaved, btnCheck, btnSave });
             AcceptButton = btnSave;
+
             savedTimer.Interval = 3000;
             savedTimer.Tick += delegate
             {
@@ -73,108 +138,113 @@ namespace UABlackoutPreWarning
                 lblSaved.Text = "";
             };
 
+            ClientSize = new Size(Ui.S(Width96), Ui.S(600));
             ApplyTheme(T);
+            Arrange();
             ResumeLayout(false);
-            PerformLayout();
         }
 
-        private GroupBox BuildGroup(Point at)
+        private void Section(string title)
         {
-            var g = MainForm.Group(S.GroupSettings, at, 186);
-
-            g.Controls.Add(MainForm.Caption(S.LabelUrl, 12, 22));
-            txtUrl.SetBounds(12, 44, Inner, 23);
-            g.Controls.Add(txtUrl);
-
-            // Shown under the address only after a failed Save (see SetUrlError).
-            lblUrlError.Tag = Theme.RoleWarn;
-            lblUrlError.UseMnemonic = false;
-            lblUrlError.Visible = false;
-            lblUrlError.SetBounds(12, 70, Inner, 18);
-            g.Controls.Add(lblUrlError);
-
-            g.Controls.Add(MainForm.Caption(S.LabelQueue, 12, 78));
-            g.Controls.Add(MainForm.Caption(S.LabelLead, Col2, 78));
-            g.Controls.Add(MainForm.Caption(S.LabelRefresh, Col3, 78));
-
-            // The three captions precede all three fields in tab order, so screen readers would take
-            // a field's name from the wrong caption; name them explicitly.
-            cmbQueue.AccessibleName = S.LabelQueue;
-            numLead.AccessibleName = S.LabelLead;
-            numRefresh.AccessibleName = S.LabelRefresh;
-
-            cmbQueue.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbQueue.SetBounds(12, 96, 80, 23);
-            cmbQueue.DrawItem += DrawQueueItem;
-            g.Controls.Add(cmbQueue);
-
-            SetupNumber(numLead, AppSettings.MinLead, AppSettings.MaxLead, Col2, 96);
-            SetupNumber(numRefresh, AppSettings.MinRefresh, AppSettings.MaxRefresh, Col3, 96);
-            g.Controls.Add(numLead);
-            g.Controls.Add(numRefresh);
-            g.Controls.Add(MainForm.Caption(S.Minutes, Col2 + 66, 99));
-            g.Controls.Add(MainForm.Caption(S.Minutes, Col3 + 66, 99));
-
-            chkAutostart.Text = S.StartWithWindows;
-            // Auto-sized so the clickable area ends where the caption ends.
-            chkAutostart.AutoSize = true;
-            chkAutostart.Location = new Point(12, 134);
-            g.Controls.Add(chkAutostart);
-
-            // Puts the default values back into the fields; nothing is applied until Save.
-            btnDefaults.Text = S.ButtonDefaults;
-            btnDefaults.SetBounds(12 + Inner - 150, 128, 150, 28);
-            btnDefaults.UseVisualStyleBackColor = true;
-            btnDefaults.Click += delegate { RestoreDefaults(); };
-            tips.SetToolTip(btnDefaults, S.DefaultsHint);
-            g.Controls.Add(btnDefaults);
-
-            // Second row of buttons sits below the checkbox row.
-            btnSave.Text = S.ButtonSave;
-            btnSave.Tag = Theme.RolePrimary;
-            btnSave.UseVisualStyleBackColor = true;
-            btnSave.Click += delegate { Save(); };
-            btnCheck.Text = S.ButtonCheckNow;
-            btnCheck.UseVisualStyleBackColor = true;
-            btnCheck.Click += delegate { app.RefreshNow(); };
-            btnTest.Text = S.ButtonTest;
-            btnTest.UseVisualStyleBackColor = true;
-            btnTest.Click += delegate { app.SendTestNotification(); };
-            tips.SetToolTip(btnTest, S.TestHint);
-            g.Controls.Add(btnSave);
-            g.Controls.Add(btnCheck);
-            g.Controls.Add(btnTest);
-
-            lnkAbout.Text = S.MenuAbout;
-            lnkAbout.AutoSize = true;
-            lnkAbout.LinkClicked += delegate { app.ShowAbout(); };
-            g.Controls.Add(lnkAbout);
-
-            lblSaved.Tag = Theme.RoleSub;
-            g.Controls.Add(lblSaved);
-
-            // Rows below the checkbox: buttons on the right, About link and "Saved" on the left.
-            int buttonsTop = 128 + 28 + 12;
-            btnSave.SetBounds(12 + Inner - 110, buttonsTop, 110, 30);
-            btnCheck.SetBounds(btnSave.Left - 8 - 140, buttonsTop, 140, 30);
-            btnTest.SetBounds(btnCheck.Left - 8 - 160, buttonsTop, 160, 30);
-            lnkAbout.Location = new Point(12, buttonsTop + 8);
-            // "Saved" / "Not saved yet": right-aligned in the gap between the checkbox and Restore defaults;
-            // the final position is set in PlaceSavedLabel() from the real (scaled) control positions.
-            lblSaved.SetBounds(212, 130, 150, 24);
-            lblSaved.TextAlign = ContentAlignment.MiddleRight;
-            lblSaved.AutoEllipsis = true;
-            g.Height = buttonsTop + 30 + 16;
-            ClientSize = new Size(ClientSize.Width, at.Y + g.Height + 12);
-            return g;
+            var l = Ui.Label(title, Ui.BodyStrong, null);
+            Controls.Add(l);
+            blocks.Add(l);
         }
 
-        private static void SetupNumber(NumericUpDown n, int min, int max, int x, int y)
+        private Row AddRow(string title, string hint, Control control, LinkLabel link)
+        {
+            var row = new Row();
+            row.Card = new Card();
+            row.Title = Ui.Label(title, Ui.Body, null);
+            row.Card.Controls.Add(row.Title);
+            if (hint != null)
+            {
+                row.Hint = Ui.Label(hint, Ui.Caption, Theme.RoleSub);
+                row.Card.Controls.Add(row.Hint);
+            }
+            if (link != null)
+            {
+                row.Link = link;
+                row.Card.Controls.Add(link);
+            }
+            row.Control = control;
+            row.Card.Controls.Add(control);
+            Controls.Add(row.Card);
+            blocks.Add(row);
+            return row;
+        }
+
+        /// <summary>A number field (no spin buttons; arrow keys and the wheel change it) followed by "хв".</summary>
+        private Panel MinutesBox(NumericUpDown n, int min, int max, string name)
         {
             n.Minimum = min;
             n.Maximum = max;
             n.TextAlign = HorizontalAlignment.Right;
-            n.SetBounds(x, y, 60, 23);
+            n.AccessibleName = name;
+            n.AccessibleDescription = S.Minutes;
+            var field = new FieldHost(n, Ui.S(72));
+            var unit = Ui.Inline(S.Minutes, Ui.Body, Theme.RoleSub);
+            var box = new Panel();
+            box.Controls.Add(field);
+            box.Controls.Add(unit);
+            unit.Location = new Point(field.Right + Ui.S(8), (field.Height - unit.Height) / 2);
+            box.Size = new Size(field.Width + Ui.S(8) + Math.Max(unit.Width, Ui.S(24)), field.Height);
+            return box;
+        }
+
+        /// <summary>Places the sections and cards top-down in real pixels and fits the window height.</summary>
+        private void Arrange()
+        {
+            SuspendLayout();
+            int margin = Ui.S(16), width = Ui.S(Width96) - 2 * margin, pad = Ui.S(16), inner = width - 2 * pad;
+            int y = Ui.S(4);
+            object previous = null;
+            foreach (var block in blocks)
+            {
+                var title = block as Label;
+                if (title != null)
+                {
+                    y = Ui.Fit(title, margin + Ui.S(2), y + (previous == null ? Ui.S(4) : Ui.S(16)), width - Ui.S(4)) + Ui.S(6);
+                }
+                else if (block == urlCard)
+                {
+                    int cy = Ui.Fit(lblUrlTitle, pad, Ui.S(12), inner);
+                    urlField.SetBounds(pad, cy + Ui.S(8), inner, urlField.Height);
+                    cy = urlField.Bottom;
+                    if (urlErrorShown) cy = Ui.Fit(lblUrlError, pad, cy + Ui.S(6), inner);
+                    urlCard.SetBounds(margin, y, width, cy + Ui.S(12));
+                    y = urlCard.Bottom + Ui.S(4);
+                }
+                else
+                {
+                    var row = (Row)block;
+                    int textWidth = inner - row.Control.Width - Ui.S(16);
+                    var titleHeight = Ui.TextHeight(row.Title.Text, row.Title.Font, textWidth);
+                    int textHeight = titleHeight;
+                    if (row.Hint != null) textHeight += Ui.TextHeight(row.Hint.Text, row.Hint.Font, textWidth);
+                    if (row.Link != null) textHeight += Ui.S(2) + row.Link.Height;
+                    int content = Math.Max(textHeight, row.Control.Height);
+                    int height = Math.Max(Ui.S(60), content + Ui.S(24));
+                    int ty = (height - textHeight) / 2;
+                    ty = Ui.Fit(row.Title, pad, ty, textWidth);
+                    if (row.Hint != null) ty = Ui.Fit(row.Hint, pad, ty, textWidth);
+                    if (row.Link != null) row.Link.Location = new Point(pad, ty + Ui.S(2));
+                    row.Control.Location = new Point(pad + inner - row.Control.Width, (height - row.Control.Height) / 2);
+                    row.Card.SetBounds(margin, y, width, height);
+                    y = row.Card.Bottom + Ui.S(4);
+                }
+                previous = block;
+            }
+
+            // Footer.
+            int top = y + Ui.S(16);
+            btnSave.Location = new Point(margin + width - btnSave.Width, top);
+            btnCheck.Location = new Point(btnSave.Left - Ui.S(8) - btnCheck.Width, top);
+            lnkAbout.Location = new Point(margin + Ui.S(2), top + (btnSave.Height - lnkAbout.Height) / 2);
+            int savedLeft = lnkAbout.Right + Ui.S(16);
+            lblSaved.SetBounds(savedLeft, top, Math.Max(0, btnCheck.Left - Ui.S(12) - savedLeft), btnSave.Height);
+            ClientSize = new Size(Ui.S(Width96), btnSave.Bottom + margin);
+            ResumeLayout(false);
         }
 
         // ---- theme -------------------------------------------------------------
@@ -185,69 +255,29 @@ namespace UABlackoutPreWarning
             T = theme;
             SuspendLayout();
             T.Apply(this);
-            cmbQueue.DrawMode = T.Dark ? DrawMode.OwnerDrawFixed : DrawMode.Normal;
-            MatchQueueHeight();
-            Theme.ApplyTitleBar(this, T.Dark);
-            ResumeLayout(true);
+            T.ApplyFrame(this);
+            ResumeLayout(false);
             Invalidate(true);
         }
 
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
-            Theme.ApplyTitleBar(this, T.Dark);
+            T.ApplyFrame(this);
         }
 
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            MatchQueueHeight();   // after DPI scaling, when the final control heights are known
-            PlaceSavedLabel();
+            Arrange();      // the drop-downs know their final height only once their handles exist
         }
 
-        /// <summary>
-        /// Puts the "Saved" label in the gap between the checkbox and Restore defaults, in real pixels,
-        /// so it is never under the button whatever the display scaling.
-        /// </summary>
-        private void PlaceSavedLabel()
+        private void ShowQueueHelp()
         {
-            int gap = Font.Height / 2;
-            int left = chkAutostart.Right + gap;
-            int width = Math.Max(0, btnDefaults.Left - gap - left);
-            lblSaved.Bounds = new Rectangle(left, btnDefaults.Top, width, btnDefaults.Height);
-            lblSaved.BringToFront();
-        }
-
-        private void ShowSavedText(string text)
-        {
-            PlaceSavedLabel();
-            lblSaved.Text = text;
-        }
-
-        /// <summary>
-        /// In dark mode the queue list is owner-drawn and its height follows ItemHeight;
-        /// size it so the box is exactly as tall as the two number fields beside it.
-        /// </summary>
-        private void MatchQueueHeight()
-        {
-            if (T.Dark)
+            using (var help = new QueueHelpForm(S, T))
             {
-                int chrome = cmbQueue.Height - cmbQueue.ItemHeight;      // border + padding of the closed box
-                int item = numLead.Height - chrome;
-                if (item > 0 && item != cmbQueue.ItemHeight) cmbQueue.ItemHeight = item;
+                help.ShowDialog(this);
             }
-            cmbQueue.Top = numLead.Top + (numLead.Height - cmbQueue.Height) / 2;
-        }
-
-        /// <summary>Queue list items in dark mode (the closed box and list follow the theme).</summary>
-        private void DrawQueueItem(object sender, DrawItemEventArgs e)
-        {
-            if (e.Index < 0) return;
-            bool selected = (e.State & DrawItemState.Selected) != 0;
-            var back = selected ? T.ButtonHover : T.Input;
-            using (var b = new SolidBrush(back)) e.Graphics.FillRectangle(b, e.Bounds);
-            TextRenderer.DrawText(e.Graphics, cmbQueue.Items[e.Index].ToString(), e.Font, e.Bounds, T.InputText,
-                TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
         }
 
         // ---- data in and out ---------------------------------------------------
@@ -259,6 +289,7 @@ namespace UABlackoutPreWarning
             SetQueueItems(s.KnownQueueList(), s.Queue);
             numLead.Value = Clamp(s.LeadMinutes, numLead);
             numRefresh.Value = Clamp(s.RefreshMinutes, numRefresh);
+            cmbLanguage.SelectedIndex = Math.Max(0, Array.IndexOf(LanguageValues, s.Language));
             chkAutostart.Checked = s.StartWithWindows;
             lblSaved.Text = "";
         }
@@ -289,6 +320,7 @@ namespace UABlackoutPreWarning
             cmbQueue.SelectedItem = d.Queue;
             numLead.Value = Clamp(d.LeadMinutes, numLead);
             numRefresh.Value = Clamp(d.RefreshMinutes, numRefresh);
+            cmbLanguage.SelectedIndex = 0;
             chkAutostart.Checked = d.StartWithWindows;
 
             savedTimer.Stop();
@@ -312,42 +344,46 @@ namespace UABlackoutPreWarning
             s.Queue = (cmbQueue.SelectedItem as string) ?? AppSettings.DefaultQueue;
             s.LeadMinutes = (int)numLead.Value;
             s.RefreshMinutes = (int)numRefresh.Value;
+            s.Language = LanguageValues[Math.Max(0, cmbLanguage.SelectedIndex)];
             s.StartWithWindows = chkAutostart.Checked;
             app.ApplySettings(s);
+            ShowSaved();
+        }
 
+        /// <summary>"Saved" for 3 seconds, announced to screen readers.</summary>
+        public void ShowSaved()
+        {
             ShowSavedText(S.Saved);
             savedTimer.Stop();
             savedTimer.Start();
         }
 
+        /// <summary>After a rebuild (language change): keyboard focus back on Save, where the user left it.</summary>
+        public void FocusSave()
+        {
+            Activate();
+            btnSave.Focus();
+        }
+
+        private void ShowSavedText(string text)
+        {
+            lblSaved.Text = text;
+            lblSaved.Announce();
+        }
+
         /// <summary>
         /// Shows <paramref name="text"/> under the address field (null hides it) and makes it the field's
-        /// accessible description, so it is read out when focus returns to the field. The rows below the
-        /// address move down by the label's height while it shows. Uses real (scaled) pixels.
+        /// accessible description, so it is read out when focus returns to the field.
         /// </summary>
         private void SetUrlError(string text)
         {
             bool show = !string.IsNullOrEmpty(text);
             lblUrlError.Text = show ? text : "";
             txtUrl.AccessibleDescription = show ? text : null;
-
-            int gap = Font.Height / 4;
-            if (show) lblUrlError.SetBounds(txtUrl.Left, txtUrl.Bottom + gap, txtUrl.Width, Font.Height);
-            int shift = show ? gap + lblUrlError.Height : 0;
-            int delta = shift - urlErrorShift;
-            if (delta != 0)
-            {
-                SuspendLayout();
-                foreach (Control c in group.Controls)
-                {
-                    if (c != txtUrl && c != lblUrlError && c.Top > txtUrl.Top) c.Top += delta;
-                }
-                group.Height += delta;
-                ClientSize = new Size(ClientSize.Width, ClientSize.Height + delta);
-                urlErrorShift = shift;
-                ResumeLayout(true);
-            }
+            if (urlErrorShown == show) return;
+            urlErrorShown = show;
             lblUrlError.Visible = show;
+            Arrange();
         }
 
         private static decimal Clamp(int value, NumericUpDown n)
@@ -390,12 +426,22 @@ namespace UABlackoutPreWarning
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                savedTimer.Dispose();
-                tips.Dispose();
-            }
+            if (disposing) savedTimer.Dispose();
             base.Dispose(disposing);
+        }
+    }
+
+    /// <summary>A label whose text changes are announced by screen readers (a status message).</summary>
+    internal sealed class StatusLabel : Label
+    {
+        public StatusLabel()
+        {
+            AccessibleRole = AccessibleRole.StatusBar;
+        }
+
+        public void Announce()
+        {
+            if (IsHandleCreated) AccessibilityNotifyClients(AccessibleEvents.NameChange, -1);
         }
     }
 }
