@@ -1,8 +1,7 @@
 # CLAUDE.md - UABlackoutPreWarning
 
 Handoff and working notes for Claude (Claude Code or claude.ai). Read this first, then `docs/DESIGN.md`.
-Owner: Igor Zakharov (GitHub `IgorZaharov`). Last updated 2026-11-03, latest release **v1.4.0**
-(`main` is at 1.5.0, not yet released).
+Owner: Igor Zakharov (GitHub `IgorZaharov`). Last updated 2026-11-03, latest release **v1.5.0**.
 
 ## 1. Goal
 
@@ -161,4 +160,5 @@ UI layout rule since 1.4.0: windows use `AutoScaleMode.None` and place every con
 
 1. Igor tries 1.5.0 on his PC (125 %): Mica on all windows, both themes, icon switching during an outage,
    strip tooltip, animations; Narrator on the progress line.
-2. Igor publishes v1.5.0; verify the release (see section 4) and close issue #1.
+2. v1.5.0 is published (tag pushed by Claude on Igor's request; CI created the release). Close issue #1
+   after step 1.
