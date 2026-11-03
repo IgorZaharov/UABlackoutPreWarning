@@ -76,7 +76,7 @@ namespace UABlackoutPreWarning
             t.Link = Color.FromArgb(0x99, 0xEB, 0xFF);
             t.Warn = Color.FromArgb(0xFF, 0x99, 0xA4);
             t.StripOn = Color.FromArgb(0x3A, 0x3A, 0x3A);
-            t.StripOff = Color.FromArgb(0xE5, 0x48, 0x3C);
+            t.StripOff = Color.FromArgb(0xF2, 0x5F, 0x55);    // 3.5:1 against StripOn, so red reads apart from grey
             t.StripUnknown = Color.FromArgb(0x2A, 0x2A, 0x2A);
             t.Marker = Color.White;
             return t;

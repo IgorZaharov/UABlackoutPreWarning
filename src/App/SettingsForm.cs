@@ -31,7 +31,9 @@ namespace UABlackoutPreWarning
         private readonly Button btnTest = new Button();
         private readonly Label lblSaved = new Label();
         private readonly LinkLabel lnkAbout = new LinkLabel();
-        private readonly ErrorProvider errors = new ErrorProvider();
+        private readonly Label lblUrlError = new Label();
+        private GroupBox group;
+        private int urlErrorShift;   // real pixels the rows below the address are moved down while the error shows
         private readonly ToolTip tips = new ToolTip();
         private readonly Timer savedTimer = new Timer();
 
@@ -60,10 +62,10 @@ namespace UABlackoutPreWarning
             KeyPreview = true;
             ClientSize = new Size(GroupWidth + 24, 8 + 186 + 12);
 
-            Controls.Add(BuildGroup(new Point(12, 8)));
+            group = BuildGroup(new Point(12, 8));
+            Controls.Add(group);
 
             AcceptButton = btnSave;
-            errors.BlinkStyle = ErrorBlinkStyle.NeverBlink;
             savedTimer.Interval = 3000;
             savedTimer.Tick += delegate
             {
@@ -84,9 +86,22 @@ namespace UABlackoutPreWarning
             txtUrl.SetBounds(12, 44, Inner, 23);
             g.Controls.Add(txtUrl);
 
+            // Shown under the address only after a failed Save (see SetUrlError).
+            lblUrlError.Tag = Theme.RoleWarn;
+            lblUrlError.UseMnemonic = false;
+            lblUrlError.Visible = false;
+            lblUrlError.SetBounds(12, 70, Inner, 18);
+            g.Controls.Add(lblUrlError);
+
             g.Controls.Add(MainForm.Caption(S.LabelQueue, 12, 78));
             g.Controls.Add(MainForm.Caption(S.LabelLead, Col2, 78));
             g.Controls.Add(MainForm.Caption(S.LabelRefresh, Col3, 78));
+
+            // The three captions precede all three fields in tab order, so screen readers would take
+            // a field's name from the wrong caption; name them explicitly.
+            cmbQueue.AccessibleName = S.LabelQueue;
+            numLead.AccessibleName = S.LabelLead;
+            numRefresh.AccessibleName = S.LabelRefresh;
 
             cmbQueue.DropDownStyle = ComboBoxStyle.DropDownList;
             cmbQueue.SetBounds(12, 96, 80, 23);
@@ -240,7 +255,7 @@ namespace UABlackoutPreWarning
         public void LoadSettings(AppSettings s)
         {
             txtUrl.Text = s.ScheduleUrl;
-            errors.SetError(txtUrl, "");
+            SetUrlError(null);
             SetQueueItems(s.KnownQueueList(), s.Queue);
             numLead.Value = Clamp(s.LeadMinutes, numLead);
             numRefresh.Value = Clamp(s.RefreshMinutes, numRefresh);
@@ -269,7 +284,7 @@ namespace UABlackoutPreWarning
         {
             var d = new AppSettings();
             txtUrl.Text = d.ScheduleUrl;
-            errors.SetError(txtUrl, "");
+            SetUrlError(null);
             if (!cmbQueue.Items.Contains(d.Queue)) cmbQueue.Items.Add(d.Queue);
             cmbQueue.SelectedItem = d.Queue;
             numLead.Value = Clamp(d.LeadMinutes, numLead);
@@ -286,11 +301,11 @@ namespace UABlackoutPreWarning
             var url = txtUrl.Text.Trim();
             if (!AppSettings.IsValidUrl(url))
             {
-                errors.SetError(txtUrl, S.InvalidUrl);
+                SetUrlError(S.InvalidUrl);
                 txtUrl.Focus();
                 return;
             }
-            errors.SetError(txtUrl, "");
+            SetUrlError(null);
 
             var s = new AppSettings();
             s.ScheduleUrl = url;
@@ -303,6 +318,36 @@ namespace UABlackoutPreWarning
             ShowSavedText(S.Saved);
             savedTimer.Stop();
             savedTimer.Start();
+        }
+
+        /// <summary>
+        /// Shows <paramref name="text"/> under the address field (null hides it) and makes it the field's
+        /// accessible description, so it is read out when focus returns to the field. The rows below the
+        /// address move down by the label's height while it shows. Uses real (scaled) pixels.
+        /// </summary>
+        private void SetUrlError(string text)
+        {
+            bool show = !string.IsNullOrEmpty(text);
+            lblUrlError.Text = show ? text : "";
+            txtUrl.AccessibleDescription = show ? text : null;
+
+            int gap = Font.Height / 4;
+            if (show) lblUrlError.SetBounds(txtUrl.Left, txtUrl.Bottom + gap, txtUrl.Width, Font.Height);
+            int shift = show ? gap + lblUrlError.Height : 0;
+            int delta = shift - urlErrorShift;
+            if (delta != 0)
+            {
+                SuspendLayout();
+                foreach (Control c in group.Controls)
+                {
+                    if (c != txtUrl && c != lblUrlError && c.Top > txtUrl.Top) c.Top += delta;
+                }
+                group.Height += delta;
+                ClientSize = new Size(ClientSize.Width, ClientSize.Height + delta);
+                urlErrorShift = shift;
+                ResumeLayout(true);
+            }
+            lblUrlError.Visible = show;
         }
 
         private static decimal Clamp(int value, NumericUpDown n)
@@ -349,7 +394,6 @@ namespace UABlackoutPreWarning
             {
                 savedTimer.Dispose();
                 tips.Dispose();
-                errors.Dispose();
             }
             base.Dispose(disposing);
         }
