@@ -1,7 +1,7 @@
 # CLAUDE.md - UABlackoutPreWarning
 
 Handoff and working notes for Claude (Claude Code or claude.ai). Read this first, then `docs/DESIGN.md`.
-Owner: Igor Zakharov (GitHub `IgorZaharov`). Last updated 2026-11-03, latest release **v1.5.0**.
+Owner: Igor Zakharov (GitHub `IgorZaharov`). Last updated 2026-11-03, latest release **v1.4.0** (v1.5.0 is a pre-release; `main` is at 1.5.1).
 
 ## 1. Goal
 
@@ -160,5 +160,8 @@ UI layout rule since 1.4.0: windows use `AutoScaleMode.None` and place every con
 
 1. Igor tries 1.5.0 on his PC (125 %): Mica on all windows, both themes, icon switching during an outage,
    strip tooltip, animations; Narrator on the progress line.
-2. v1.5.0 is published (tag pushed by Claude on Igor's request; CI created the release). Close issue #1
-   after step 1.
+2. v1.5.0 was published, then rolled back on Igor's request: Chrome showed "Virus detected" for the zip
+   (Defender clean; VirusTotal 1/67, only MaxSecure "susgen"), so v1.5.0 is now a **pre-release** and
+   v1.4.0 is "Latest" again. `main` is at 1.5.1 (current hour on the strip no longer raised). Before the
+   next release decide with Igor how to handle the reputation warning (Google false-positive report,
+   code signing). `gh` is logged in on Igor's PC (keyring). Close issue #1 after step 1.
