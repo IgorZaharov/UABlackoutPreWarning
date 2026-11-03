@@ -264,7 +264,7 @@ namespace UABlackoutPreWarning
             lblLegendOff.Location = new Point(swatchOn.Left - Ui.S(12) - lblLegendOff.Width, legendTop);
             swatchOff.SetBounds(lblLegendOff.Left - Ui.S(6) - sw, swatchOn.Top, sw, sw);
             y = tabToday.Bottom + Ui.S(8);
-            strip.SetBounds(pad, y, inner, Ui.S(48));
+            strip.SetBounds(pad, y, inner, Ui.S(46));
             statusCard.SetBounds(margin, top + row + Ui.S(8), width, strip.Bottom + pad);
 
             y = Ui.Fit(lblStatus, margin + Ui.S(2), statusCard.Bottom + Ui.S(8), width - Ui.S(4));
@@ -421,7 +421,7 @@ namespace UABlackoutPreWarning
         {
             base.OnPaint(e);
             var g = e.Graphics;
-            float barTop = Ui.S(5);
+            float barTop = Ui.S(3);
             float barHeight = Ui.S(20);
             float width = ClientSize.Width;
 
@@ -438,26 +438,15 @@ namespace UABlackoutPreWarning
                 TextRenderer.DrawText(g, message, Font, new Rectangle(0, (int)barTop, (int)width, (int)barHeight), ForeColor,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
             }
-            int currentHour = now >= 0 && now <= 1 ? Math.Min(23, (int)Math.Floor(now * 24)) : -1;
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             for (int h = 0; h < 24 && !(slots == null && !string.IsNullOrEmpty(message)); h++)
             {
                 float x = HourLeft(h, hourWidth, hourGap);
-                // The current hour sits a little higher, with a soft shadow under it.
-                float top = h == currentHour ? barTop - Ui.S(3) : barTop;
-                if (h == currentHour)
-                {
-                    using (var path = Ui.Round(new RectangleF(x, top + Ui.S(2), hourWidth, barHeight), Ui.S(3)))
-                    using (var shade = new SolidBrush(Color.FromArgb(60, 0, 0, 0)))
-                    {
-                        g.FillPath(shade, path);
-                    }
-                }
                 for (int k = 0; k < 2; k++)
                 {
                     int i = 2 * h + k;
                     var colour = slots == null ? Unknown : (slots[i] ? Off : On);
-                    using (var path = Ui.Round(new RectangleF(x + k * (halfWidth + halfGap), top, halfWidth, barHeight), Ui.S(2)))
+                    using (var path = Ui.Round(new RectangleF(x + k * (halfWidth + halfGap), barTop, halfWidth, barHeight), Ui.S(2)))
                     using (var brush = new SolidBrush(colour))
                     {
                         g.FillPath(brush, path);
