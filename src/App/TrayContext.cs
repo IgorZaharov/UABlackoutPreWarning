@@ -20,10 +20,12 @@ namespace UABlackoutPreWarning
         public string QueueBadge;
         public bool QueueMissing;
         public string Caption;          // "Next blackout" / "Power is off now"
-        public string Range;            // "14:00–16:00" or "No blackouts scheduled"
-        public string Countdown;        // "in 2 h 15 min" / "until 16:00"
-        public string TodayLabel;
+        public string Range;            // "14:00–16:00", "tomorrow 09:00–12:00" or "--:--"
+        public string Countdown;        // "in 2 h 15 min" / "until 16:00" / a note
+        public bool CountdownIsNote;    // the countdown is a note ("no schedule for tomorrow yet"), not a warning
+        public DateTime Today;
         public bool[] TodaySlots;       // null when the site has no grid for today
+        public bool[] TomorrowSlots;    // null until the site publishes tomorrow's grid (in the evening)
         public double NowFraction;      // 0..1 position of "now" on the strip
         public string StatusLine;
         public bool StatusIsError;
@@ -579,7 +581,7 @@ namespace UABlackoutPreWarning
         {
             var v = new StatusView();
             v.QueueBadge = string.Format(S.QueueBadge, settings.Queue);
-            v.TodayLabel = string.Format(S.TodayLabel, Strings.Date(now));
+            v.Today = now.Date;
             v.NowFraction = now.TimeOfDay.TotalMinutes / (24 * 60.0);
 
             if (page == null)
@@ -591,31 +593,16 @@ namespace UABlackoutPreWarning
             else
             {
                 v.QueueMissing = !page.QueueLabels().Contains(settings.Queue);
-                var current = SeriesBuilder.Current(series, now);
-                var next = SeriesBuilder.Next(series, now);
-                if (current != null)
-                {
-                    v.Caption = S.PowerOffNow;
-                    v.Range = Strings.Range(current);
-                    v.Countdown = string.Format(S.UntilTime, Strings.EndTime(current));
-                }
-                else if (next != null)
-                {
-                    v.Caption = S.NextBlackout;
-                    v.Range = S.RangeFrom(next, now);
-                    v.Countdown = string.Format(S.InTime, S.Duration(next.Start - now));
-                }
-                else
-                {
-                    v.Caption = S.NextBlackout;
-                    v.Range = S.NoBlackouts;
-                    v.Countdown = "";
-                }
+                var next = NextBlackout.Describe(S, page, settings.Queue, now);
+                v.Caption = next.Caption;
+                v.Range = next.Range;
+                v.Countdown = next.Countdown;
+                v.CountdownIsNote = next.CountdownIsNote;
 
-                foreach (var day in page.Days)
-                {
-                    if (day.Date == now.Date) v.TodaySlots = day.GetRow(settings.Queue);
-                }
+                var today = page.FindDay(now);
+                var tomorrow = page.FindDay(now.AddDays(1));
+                if (today != null) v.TodaySlots = today.GetRow(settings.Queue);
+                if (tomorrow != null) v.TomorrowSlots = tomorrow.GetRow(settings.Queue);
 
                 if (page.NoticeLines.Count > 0)
                 {

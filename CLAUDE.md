@@ -62,6 +62,7 @@ Windows notification per outage series, N minutes before it starts.
 | `src/Core/Settings.cs` | `AppSettings` (defaults, ranges, `Normalize`, `Language`) |
 | `src/Core/Strings.cs` | All UI text, uk + en, `ForLanguage`, time/duration formatting, day-strip spoken text |
 | `src/Core/Donations.cs` | `DonationList.Parse` (hand-written reader for donations.json; titled https links only) |
+| `src/Core/NextBlackout.cs` | `NextBlackout.Describe`: the main window's next-blackout text across today and tomorrow, "--:--" with a note when nothing is ahead |
 | `src/App/Program.cs` | Single instance (mutex + `Local\UABlackoutPreWarning.Show` event), DPI aware, TLS 1.2 |
 | `src/App/TrayContext.cs` | Tray icon/menu, timers (warn 30 s, refresh, retry 1/2/5 min), downloads, `Notify`, `SendTestNotification`, memory trim, window position, `ChangeLanguage`, donations download |
 | `src/App/MainForm.cs` | Main window: toolbar (queue, gear, ?, dark-theme switch), status card, `DayStrip`, site notice, links |
@@ -72,7 +73,7 @@ Windows notification per outage series, N minutes before it starts.
 | `src/App/Toasts.cs` | AUMID registration, toast icon PNG, toast XML, WinRT show, COM release |
 | `src/App/Platform.cs` | `RegistrySettingsStore` (+ `MainWindowPosition`), `Autostart`, `Http`, `ScheduleFetcher`, `DonationFetcher` (json + favicons, memory only), `MemoryTrim`, `AppInfo` (URLs, `OpenUrl`) |
 | `donations.json` | Donation links shown in About; the app reads it from `raw.githubusercontent.com/.../main/donations.json`, so edits take effect after a push, without a release |
-| `tests/Core.Tests/Program.cs` | Dependency-free test runner, 29 tests; fixtures in `tests/Fixtures/` (saved ZTOE pages) |
+| `tests/Core.Tests/Program.cs` | Dependency-free test runner, 35 tests; fixtures in `tests/Fixtures/` (saved ZTOE pages) |
 | `tools/screenshots/` | `Shots.cs` + `shots.cmd`: runs the real app for screenshots or a memory probe. Mode `windows` = window pictures only (both themes, queue help, a language switch; uses the local donations.json), safe to run on Igor's PC |
 | `tools/make_icon.py` | Generates `assets/app.ico` (crossed-out lightbulb) |
 | `.github/workflows/build.yml` | Build + tests on every push; attaches `UABlackoutPreWarning.zip` to releases |
@@ -138,7 +139,7 @@ UI layout rule since 1.4.0: windows use `AutoScaleMode.None` and place every con
 | 1.3.3 | "Saved" label placed from real positions (was hidden behind Restore defaults); CI concurrency fix |
 | 1.3.4 | Main window reopens where it was last closed (`MainWindowPosition`, centred if off-screen) |
 | 1.3.5 | Accessibility fixes from a UI review: Queue/minute fields named for screen readers; invalid URL error shown as text under the field (was an ErrorProvider icon); dark day-strip red `#F25F55` (3.5:1 against grey) |
-| 1.4.0 | Issue #1 Windows 11 redesign (approved mockup) + UI language switch, queue help dialog, main-window links (Графіки, Facebook), Donations from donations.json with favicons. Checked with `shots.cmd ... windows` on Igor's PC (uk-UA and en-US, both themes, 100 %); not yet at 125 %/150 % or on Windows 10 |
+| 1.4.0 | Issue #1 Windows 11 redesign (approved mockup) + UI language switch, queue help dialog, main-window links (Графіки, Facebook), Donations from donations.json with favicons, Сьогодні / Завтра tabs and "--:--" when no next blackout is known (`Core/NextBlackout.cs`). Checked with `shots.cmd ... windows` on Igor's PC (uk-UA and en-US, both themes, 100 %); not yet at 125 %/150 % or on Windows 10 |
 
 ## 7. Open items
 

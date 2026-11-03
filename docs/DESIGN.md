@@ -40,7 +40,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | ID | Requirement |
 | --- | --- |
 | F1 | Tray icon. Right-click menu: Open, Check now, About, Close Application. Double-click opens the main window. |
-| F2 | Main window: queue, gear (Preferences), "?" (About) and the dark-theme switch; status card with today's strip; site notice; links "Графіки" (`https://www.ztoe.com.ua/unhooking-search.php`) and "Житомиробленерго на Facebook" (`https://www.facebook.com/ztoe.com.ua`). Separate Preferences window in three sections: Графік (schedule URL, queue), Сповіщення (lead time, refresh interval, test notification), Система (UI language, Start with Windows, Restore defaults); Check now and Save at the bottom. |
+| F2 | Main window: queue, gear (Preferences), "?" (About) and the dark-theme switch; status card with the next blackout (counted into tomorrow's grid when the site has published it; "--:--" plus a note when nothing is ahead: tomorrow not published, or no outages tomorrow) and a day strip with "Сьогодні" / "Завтра" tabs; site notice; links "Графіки" (`https://www.ztoe.com.ua/unhooking-search.php`) and "Житомиробленерго на Facebook" (`https://www.facebook.com/ztoe.com.ua`). Separate Preferences window in three sections: Графік (schedule URL, queue), Сповіщення (lead time, refresh interval, test notification), Система (UI language, Start with Windows, Restore defaults); Check now and Save at the bottom. |
 | F3–F4 | Download and parse on start, then every refresh interval. |
 | F5 | Consecutive red slots form one blackout series. |
 | F6 | One notification per series, X minutes before it starts. |
@@ -83,6 +83,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | `src/Core/ScheduleParser.cs` | `ScheduleParser` | Grid(s), dates, update time, banner, row labels, red-cell detection | Yes |
 | `src/Core/Schedule.cs` | `SeriesBuilder` | Red slots → series, midnight join across days, current/next series | Yes |
 | `src/Core/Schedule.cs` | `WarningPlanner` | Which warnings are due; remembers the last 20 warned series | Yes |
+| `src/Core/NextBlackout.cs` | `NextBlackout` | Main window's next-blackout caption, time (or "--:--") and countdown or note | Yes |
 | `src/Core/Schedule.cs` | `KyivClock`, `PageDecoder` | Kyiv wall-clock time; charset detection (header, meta, cp1251) | Yes |
 | `src/Core/Settings.cs` | `AppSettings` | Defaults, ranges, normalisation, queue list, UI language | Yes |
 | `src/Core/Strings.cs` | `Strings` | Ukrainian and English text, language choice, time/duration formatting, the day strip's spoken text | Yes |
@@ -147,7 +148,7 @@ Start with Windows writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\UA
 | `build.sh` | Linux/macOS with Mono | Development build (no manifest; DPI awareness is also set in code) and tests |
 | GitHub Actions | `windows-latest` | `build.cmd` on every push; a `v*` tag or a published release gets `UABlackoutPreWarning.zip` attached |
 
-`tests/Core.Tests` is a dependency-free test runner (29 tests) covering the fixture, synthetic markup
+`tests/Core.Tests` is a dependency-free test runner (35 tests) covering the fixture, synthetic markup
 (no `<tbody>`, `bgcolor`, multiple days, malformed rows), planner rules, settings, strings, the language
 choice and donations.json (including the repository's own file).
 

@@ -55,6 +55,12 @@ namespace UABlackoutPreWarning.Tests
             Run("Donations: escapes, extra fields, invalid entries", DonationsFiltering);
             Run("Donations: malformed text gives an empty list", DonationsMalformed);
             Run("Donations: repository donations.json is valid", DonationsRepoFile);
+            Run("Fixture: day lookup for the Today / Tomorrow tabs", FixtureDayLookup);
+            Run("Next blackout: countdown into tomorrow's grid", NextIntoTomorrow);
+            Run("Next blackout: --:-- when tomorrow is not published", NextUnknownTomorrow);
+            Run("Next blackout: --:-- when tomorrow has no outages", NextNoneTomorrow);
+            Run("Next blackout: power off now", NextPowerOffNow);
+            Run("Strings: tomorrow strip description", StripDescriptionTomorrow);
 
             Console.WriteLine();
             Console.WriteLine("{0} passed, {1} failed", passed, failed);
@@ -460,6 +466,77 @@ namespace UABlackoutPreWarning.Tests
             var path = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(Path.GetFullPath(fixtures))), "donations.json");
             var list = DonationList.Parse(File.ReadAllText(path, Encoding.UTF8));
             True(list.Count > 0, "donations.json has valid entries: " + path);
+        }
+
+        private static ParsedPage EveningPage()
+        {
+            var bytes = File.ReadAllBytes(Path.Combine(fixtures, "ztoe-2026-10-28-2100.html"));
+            return ScheduleParser.Parse(PageDecoder.Decode(bytes, null));
+        }
+
+        private static void FixtureDayLookup()
+        {
+            var page = EveningPage();
+            True(page.FindDay(new DateTime(2026, 10, 28)) != null, "today's grid found");
+            True(page.FindDay(new DateTime(2026, 10, 29, 23, 59, 0)) != null, "tomorrow's grid found by any time of that day");
+            True(page.FindDay(new DateTime(2026, 10, 30)) == null, "no grid for the day after");
+            True(page.FindDay(new DateTime(2026, 10, 29)).GetRow("5.2")[18], "tomorrow 09:00 off for 5.2");
+        }
+
+        private static void NextIntoTomorrow()
+        {
+            var page = EveningPage();
+            var now = new DateTime(2026, 10, 28, 22, 30, 0);
+            var next = NextBlackout.Describe(Strings.Ukrainian(), page, "5.2", now);
+            Equal("Наступне відключення", next.Caption, "caption");
+            Equal("завтра 09:00–12:00", next.Range, "tomorrow's range");
+            Equal("через 10 год 30 хв", next.Countdown, "countdown runs into tomorrow");
+            True(!next.CountdownIsNote, "a real countdown (warning colour)");
+        }
+
+        private static void NextUnknownTomorrow()
+        {
+            // 29.10 after its last outage (18:00-21:00): the page has no grid for 30.10 yet.
+            var next = NextBlackout.Describe(Strings.Ukrainian(), EveningPage(), "5.2", new DateTime(2026, 10, 29, 21, 30, 0));
+            Equal("--:--", next.Range, "unknown next blackout");
+            Equal("графіка на завтра ще немає", next.Countdown, "says why");
+            True(next.CountdownIsNote, "shown as a note");
+            Equal("no schedule for tomorrow yet",
+                NextBlackout.Describe(Strings.English(), EveningPage(), "5.2", new DateTime(2026, 10, 29, 21, 30, 0)).Countdown, "en");
+        }
+
+        private static void NextNoneTomorrow()
+        {
+            var page = new ParsedPage();
+            var today = new DaySchedule(new DateTime(2026, 10, 28));
+            var offToday = new bool[48];
+            offToday[20] = true;                                        // 10:00-10:30
+            today.AddRow("5.2", offToday);
+            var tomorrow = new DaySchedule(new DateTime(2026, 10, 29));
+            tomorrow.AddRow("5.2", new bool[48]);                       // published, no outages
+            page.Days.Add(today);
+            page.Days.Add(tomorrow);
+            var next = NextBlackout.Describe(Strings.Ukrainian(), page, "5.2", new DateTime(2026, 10, 28, 12, 0, 0));
+            Equal("--:--", next.Range, "nothing ahead");
+            Equal("завтра відключень не заплановано", next.Countdown, "tomorrow published without outages");
+            True(next.CountdownIsNote, "note");
+        }
+
+        private static void NextPowerOffNow()
+        {
+            var next = NextBlackout.Describe(Strings.Ukrainian(), EveningPage(), "5.2", new DateTime(2026, 10, 28, 20, 0, 0));
+            Equal("Зараз світла немає", next.Caption, "caption");
+            Equal("19:00–22:00", next.Range, "current range");
+            Equal("до 22:00", next.Countdown, "until");
+        }
+
+        private static void StripDescriptionTomorrow()
+        {
+            var slots = new bool[48];
+            slots[18] = slots[19] = true;
+            Equal("Завтра без світла: 09:00–10:00", Strings.Ukrainian().StripDescription(slots, true), "uk tomorrow");
+            Equal("No blackouts scheduled tomorrow", Strings.English().StripDescription(new bool[48], true), "en none tomorrow");
+            Equal("No schedule for tomorrow yet", Strings.English().StripDescription(null, true), "en not published");
         }
 
         // ---- mini framework -----------------------------------------------------

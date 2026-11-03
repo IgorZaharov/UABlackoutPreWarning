@@ -78,15 +78,20 @@ namespace UABlackoutPreWarning.Core
         public string QueueBadge { get; private set; }            // {0} = queue
         public string NextBlackout { get; private set; }
         public string PowerOffNow { get; private set; }
-        public string NoBlackouts { get; private set; }
         public string Tomorrow { get; private set; }
         public string InTime { get; private set; }                // {0} = duration
         public string UntilTime { get; private set; }             // {0} = time
-        public string TodayLabel { get; private set; }            // {0} = date
         public string LegendOff { get; private set; }
         public string LegendOn { get; private set; }
         public string StripText { get; private set; }             // {0} = ranges
         public string StripNone { get; private set; }
+        public string StripTextTomorrow { get; private set; }     // {0} = ranges
+        public string StripNoneTomorrow { get; private set; }
+        public string StripTomorrowNotPublished { get; private set; }
+        public string TabToday { get; private set; }
+        public string TabTomorrow { get; private set; }
+        public string TomorrowNone { get; private set; }
+        public string TomorrowNotPublished { get; private set; }
         public string SiteUpdated { get; private set; }           // {0} = time
         public string Checked { get; private set; }               // {0} = time
         public string NextCheck { get; private set; }             // {0} = time
@@ -204,15 +209,20 @@ namespace UABlackoutPreWarning.Core
             s.QueueBadge = "Черга {0}";
             s.NextBlackout = "Наступне відключення";
             s.PowerOffNow = "Зараз світла немає";
-            s.NoBlackouts = "Відключень не заплановано";
             s.Tomorrow = "завтра";
             s.InTime = "через {0}";
             s.UntilTime = "до {0}";
-            s.TodayLabel = "Сьогодні, {0}";
             s.LegendOff = "без світла";
             s.LegendOn = "є світло";
             s.StripText = "Сьогодні без світла: {0}";
             s.StripNone = "Сьогодні відключень не заплановано";
+            s.StripTextTomorrow = "Завтра без світла: {0}";
+            s.StripNoneTomorrow = "Завтра відключень не заплановано";
+            s.StripTomorrowNotPublished = "Графіка на завтра ще немає";
+            s.TabToday = "Сьогодні";
+            s.TabTomorrow = "Завтра";
+            s.TomorrowNone = "завтра відключень не заплановано";
+            s.TomorrowNotPublished = "графіка на завтра ще немає";
             s.SiteUpdated = "Сайт оновлено {0}";
             s.Checked = "перевірено {0}";
             s.NextCheck = "наступна перевірка {0}";
@@ -305,15 +315,20 @@ namespace UABlackoutPreWarning.Core
             s.QueueBadge = "Queue {0}";
             s.NextBlackout = "Next blackout";
             s.PowerOffNow = "Power is off now";
-            s.NoBlackouts = "No blackouts scheduled";
             s.Tomorrow = "tomorrow";
             s.InTime = "in {0}";
             s.UntilTime = "until {0}";
-            s.TodayLabel = "Today, {0}";
             s.LegendOff = "power off";
             s.LegendOn = "power on";
             s.StripText = "Today without power: {0}";
             s.StripNone = "No blackouts scheduled today";
+            s.StripTextTomorrow = "Tomorrow without power: {0}";
+            s.StripNoneTomorrow = "No blackouts scheduled tomorrow";
+            s.StripTomorrowNotPublished = "No schedule for tomorrow yet";
+            s.TabToday = "Today";
+            s.TabTomorrow = "Tomorrow";
+            s.TomorrowNone = "no blackouts scheduled tomorrow";
+            s.TomorrowNotPublished = "no schedule for tomorrow yet";
             s.SiteUpdated = "Site updated {0}";
             s.Checked = "checked {0}";
             s.NextCheck = "next check {0}";
@@ -397,7 +412,13 @@ namespace UABlackoutPreWarning.Core
         /// </summary>
         public string StripDescription(bool[] slots)
         {
-            if (slots == null) return NoGridForToday;
+            return StripDescription(slots, false);
+        }
+
+        /// <summary>The same for today's or tomorrow's strip (the main window's two tabs).</summary>
+        public string StripDescription(bool[] slots, bool tomorrow)
+        {
+            if (slots == null) return tomorrow ? StripTomorrowNotPublished : NoGridForToday;
             var ranges = new System.Collections.Generic.List<string>();
             int i = 0;
             while (i < slots.Length)
@@ -411,7 +432,8 @@ namespace UABlackoutPreWarning.Core
                 while (i < slots.Length && slots[i]) i++;
                 ranges.Add(SlotTime(start) + "–" + SlotTime(i));
             }
-            return ranges.Count == 0 ? StripNone : string.Format(StripText, string.Join(", ", ranges.ToArray()));
+            if (ranges.Count == 0) return tomorrow ? StripNoneTomorrow : StripNone;
+            return string.Format(tomorrow ? StripTextTomorrow : StripText, string.Join(", ", ranges.ToArray()));
         }
 
         private static string SlotTime(int slot)

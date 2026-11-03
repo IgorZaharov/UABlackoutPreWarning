@@ -649,6 +649,66 @@ namespace UABlackoutPreWarning
     }
 
     /// <summary>
+    /// A Windows 11 selector-bar tab: plain text, the selected one in the text colour with a short accent
+    /// underline, the others in the secondary colour. A RadioButton underneath, so the arrow keys move between
+    /// the tabs of one container and screen readers announce which one is selected.
+    /// </summary>
+    internal sealed class TabButton : RadioButton, IThemed
+    {
+        private Theme theme = Theme.LightTheme;
+        private bool hover;
+
+        public TabButton()
+        {
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+            AutoSize = false;
+            UseMnemonic = false;
+            Font = Ui.Body;
+            Height = Ui.S(32);
+        }
+
+        /// <summary>Width for the text plus 8 px padding each side.</summary>
+        public void FitWidth()
+        {
+            Width = Ui.TextWidth(Text, Ui.BodyStrong) + Ui.S(16);
+        }
+
+        public void SetTheme(Theme t)
+        {
+            theme = t;
+            Invalidate();
+        }
+
+        protected override void OnCheckedChanged(EventArgs e) { Invalidate(); base.OnCheckedChanged(e); }
+        protected override void OnMouseEnter(EventArgs e) { hover = true; Invalidate(); base.OnMouseEnter(e); }
+        protected override void OnMouseLeave(EventArgs e) { hover = false; Invalidate(); base.OnMouseLeave(e); }
+        protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
+        protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            var g = e.Graphics;
+            var back = Parent != null ? Parent.BackColor : theme.Window;
+            g.Clear(hover && !Checked ? Theme.Blend(back, theme.Text, 0.05) : back);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            TextRenderer.DrawText(g, Text, Checked ? Ui.BodyStrong : Font, new Rectangle(0, 0, Width, Height - Ui.S(4)),
+                Checked || hover ? theme.Text : theme.Sub,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+            if (Checked)
+            {
+                float w = Ui.S(16), h = Ui.S(3);
+                using (var path = Ui.Round(new RectangleF((Width - w) / 2, Height - h - 1, w, h), h / 2))
+                using (var b = new SolidBrush(theme.Accent))
+                {
+                    g.FillPath(b, path);
+                }
+            }
+            if (Focused && ShowFocusCues) Ui.FocusRing(g, ClientRectangle, theme.Text);
+        }
+    }
+
+    /// <summary>
     /// The Windows 11 text field frame around a borderless TextBox or NumericUpDown: rounded, 1 px stroke,
     /// a stronger bottom edge that becomes a 2 px accent line while the field has focus.
     /// </summary>

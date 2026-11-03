@@ -30,7 +30,9 @@ namespace UABlackoutPreWarning
         private readonly ToggleSwitch themeSwitch = new ToggleSwitch();
 
         private readonly Card statusCard = new Card();
-        private readonly Label lblCaption, lblRange, lblCountdown, lblToday, lblLegendOff, lblLegendOn;
+        private readonly Label lblCaption, lblRange, lblCountdown, lblLegendOff, lblLegendOn;
+        private readonly TabButton tabToday = new TabButton(), tabTomorrow = new TabButton();
+        private bool showTomorrow;      // which day the strip shows (the tabs); kept when the status refreshes
         private readonly Panel swatchOff = new Panel(), swatchOn = new Panel();
         private readonly DayStrip strip = new DayStrip();
         private readonly Label lblStatus;
@@ -81,14 +83,19 @@ namespace UABlackoutPreWarning
             lblCaption = Ui.Label("", Ui.Body, Theme.RoleSub);
             lblRange = Ui.Inline("", Ui.Title, null);
             lblCountdown = Ui.Inline("", Ui.Body, Theme.RoleWarn);
-            lblToday = Ui.Inline("", Ui.Caption, Theme.RoleSub);
+            tabToday.Checked = true;
+            tabToday.CheckedChanged += delegate
+            {
+                showTomorrow = !tabToday.Checked;
+                ShowDay();
+            };
             swatchOff.Tag = Theme.RoleStripOff;
             swatchOn.Tag = Theme.RoleStripOn;
             lblLegendOff = Ui.Inline(S.LegendOff, Ui.Caption, Theme.RoleSub);
             lblLegendOn = Ui.Inline(S.LegendOn, Ui.Caption, Theme.RoleSub);
             strip.Font = Ui.Caption;
             statusCard.Controls.AddRange(new Control[]
-                { lblCaption, lblRange, lblCountdown, lblToday, swatchOff, lblLegendOff, swatchOn, lblLegendOn, strip });
+                { lblCaption, lblRange, lblCountdown, tabToday, tabTomorrow, swatchOff, lblLegendOff, swatchOn, lblLegendOn, strip });
             Controls.Add(statusCard);
 
             lblStatus = Ui.Label("", Ui.Caption, Theme.RoleSub);
@@ -143,9 +150,12 @@ namespace UABlackoutPreWarning
             lblCaption.Text = v.Caption;
             lblRange.Text = v.Range;
             lblCountdown.Text = v.Countdown;
-            lblToday.Text = v.TodayLabel;
-            strip.SetData(v.TodaySlots, v.NowFraction);
-            strip.AccessibleName = S.StripDescription(v.TodaySlots);
+            lblCountdown.ForeColor = v.CountdownIsNote ? T.Sub : T.Warn;
+            tabToday.Text = S.TabToday + ", " + v.Today.ToString("dd.MM", System.Globalization.CultureInfo.InvariantCulture);
+            tabTomorrow.Text = S.TabTomorrow + ", " + v.Today.AddDays(1).ToString("dd.MM", System.Globalization.CultureInfo.InvariantCulture);
+            tabToday.FitWidth();
+            tabTomorrow.FitWidth();
+            ShowDay();
             lblStatus.Text = v.StatusLine;
             lblStatus.ForeColor = v.StatusIsError ? T.Warn : T.Sub;
             lblNotice.Text = v.Notice ?? "";
@@ -153,6 +163,16 @@ namespace UABlackoutPreWarning
             noticeCard.Visible = hasNotice;
             tips.SetToolTip(lblNotice, v.Notice ?? "");
             Arrange();
+        }
+
+        /// <summary>The strip shows the day of the selected tab; "now" is marked on today only.</summary>
+        private void ShowDay()
+        {
+            if (lastView == null) return;
+            var slots = showTomorrow ? lastView.TomorrowSlots : lastView.TodaySlots;
+            strip.SetData(slots, showTomorrow ? -1 : lastView.NowFraction);
+            strip.Message = slots != null ? null : (showTomorrow ? S.StripTomorrowNotPublished : S.NoGridForToday);
+            strip.AccessibleName = S.StripDescription(slots, showTomorrow);
         }
 
         /// <summary>Places every control top-down in real pixels and fits the window height to the content.</summary>
@@ -187,14 +207,16 @@ namespace UABlackoutPreWarning
                 lblCountdown.Location = new Point(pad, lblRange.Bottom);
                 y = lblCountdown.Bottom;
             }
-            y += Ui.S(12);
-            lblToday.Location = new Point(pad, y);
-            int sw = Ui.S(10);
-            lblLegendOn.Location = new Point(pad + inner - lblLegendOn.Width, y);
-            swatchOn.SetBounds(lblLegendOn.Left - Ui.S(6) - sw, y + (lblLegendOn.Height - sw) / 2, sw, sw);
-            lblLegendOff.Location = new Point(swatchOn.Left - Ui.S(12) - lblLegendOff.Width, y);
+            // Day tabs (text aligned with the card's content edge) and the legend on the right.
+            y += Ui.S(8);
+            tabToday.Location = new Point(pad - Ui.S(8), y);
+            tabTomorrow.Location = new Point(tabToday.Right + Ui.S(4), y);
+            int sw = Ui.S(10), legendTop = y + (tabToday.Height - lblLegendOn.Height) / 2;
+            lblLegendOn.Location = new Point(pad + inner - lblLegendOn.Width, legendTop);
+            swatchOn.SetBounds(lblLegendOn.Left - Ui.S(6) - sw, legendTop + (lblLegendOn.Height - sw) / 2, sw, sw);
+            lblLegendOff.Location = new Point(swatchOn.Left - Ui.S(12) - lblLegendOff.Width, legendTop);
             swatchOff.SetBounds(lblLegendOff.Left - Ui.S(6) - sw, swatchOn.Top, sw, sw);
-            y = lblToday.Bottom + Ui.S(8);
+            y = tabToday.Bottom + Ui.S(8);
             strip.SetBounds(pad, y, inner, Ui.S(46));
             statusCard.SetBounds(margin, top + row + Ui.S(8), width, strip.Bottom + pad);
 
@@ -265,6 +287,19 @@ namespace UABlackoutPreWarning
         private bool[] slots;
         private double now = -1;
 
+        /// <summary>Drawn over the empty strip when the day has no grid ("Графіка на завтра ще немає").</summary>
+        public string Message
+        {
+            get { return message; }
+            set
+            {
+                message = value;
+                Invalidate();
+            }
+        }
+
+        private string message;
+
         public DayStrip()
         {
             DoubleBuffered = true;
@@ -305,7 +340,14 @@ namespace UABlackoutPreWarning
             float hourWidth = (width - 23 * hourGap) / 24;
             float halfWidth = (hourWidth - halfGap) / 2;
 
-            for (int h = 0; h < 24; h++)
+            if (slots == null && !string.IsNullOrEmpty(message))
+            {
+                // No grid for this day: one plain bar carrying the message instead of 48 empty blocks.
+                using (var brush = new SolidBrush(Unknown)) g.FillRectangle(brush, 0, barTop, width, barHeight);
+                TextRenderer.DrawText(g, message, Font, new Rectangle(0, (int)barTop, (int)width, (int)barHeight), ForeColor,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+            }
+            for (int h = 0; h < 24 && !(slots == null && !string.IsNullOrEmpty(message)); h++)
             {
                 float x = HourLeft(h, hourWidth, hourGap);
                 for (int k = 0; k < 2; k++)

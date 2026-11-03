@@ -74,6 +74,9 @@ namespace UABlackoutPreWarning
                 string suffix = d ? "-dark" : "-light";
                 steps.Add(Step(1, delegate { CloseOthers(); app.SetDarkTheme(d); app.ShowWindow(); }));
                 steps.Add(Step(d ? 25 : 3, delegate { Save(Find<MainForm>(), "main-window" + suffix); }));   // time for the download
+                steps.Add(Step(1, delegate { PickTab(Find<MainForm>(), "tabTomorrow"); }));
+                steps.Add(Step(1, delegate { Save(Find<MainForm>(), "main-window-tomorrow" + suffix); }));
+                steps.Add(Step(1, delegate { PickTab(Find<MainForm>(), "tabToday"); }));
                 steps.Add(Step(1, delegate { app.ShowSettings(); }));
                 steps.Add(Step(3, delegate { Save(Find<SettingsForm>(), "settings-window" + suffix); }));
                 steps.Add(Step(1, delegate { Find<SettingsForm>().AcceptButton.PerformClick(); }));     // Save
@@ -202,6 +205,14 @@ namespace UABlackoutPreWarning
             {
                 if (f is SettingsForm || f is AboutForm || f is QueueHelpForm) f.Close();
             }
+        }
+
+        /// <summary>Selects one of the main window's day tabs, as a click on it would.</summary>
+        private static void PickTab(MainForm form, string field)
+        {
+            var tab = (RadioButton)form.GetType().GetField(field,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(form);
+            tab.Checked = true;
         }
 
         /// <summary>Picks an entry of the language drop-down and presses Save, as a user would.</summary>

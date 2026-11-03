@@ -70,6 +70,16 @@ namespace UABlackoutPreWarning.Core
         /// <summary>Lines of the announcement at the top of the page.</summary>
         public List<string> NoticeLines { get; private set; }
 
+        /// <summary>The grid published for the calendar day of <paramref name="date"/>, or null.</summary>
+        public DaySchedule FindDay(DateTime date)
+        {
+            foreach (var day in Days)
+            {
+                if (day.Date == date.Date) return day;
+            }
+            return null;
+        }
+
         /// <summary>Row labels in page order, merged across all days.</summary>
         public List<string> QueueLabels()
         {
