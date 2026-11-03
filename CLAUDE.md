@@ -149,6 +149,18 @@ Registry values (`HKCU\Software\UABlackoutPreWarning`): `ScheduleUrl`, `Queue`, 
      dark is flat (two styles); one GroupBox frame per window that groups nothing; one screen named
      "Параметри" and "Налаштування"; "Збережено" not announced to screen readers; day strip has no
      accessible text; "За замовчуванням" / "Тестове сповіщення" are not verbs; light links are `#0000FF`.
+   - Mockup (2026-11-03, awaiting Igor's approval): https://claude.ai/artifact/PgYuaq5LWNUiCPP4316ogB
+   - Four features agreed 2026-11-03, to be built **inside the redesign** (reason: match the Android app,
+     https://github.com/IgorZaharov/Android-ZTBlackoutPreWarning):
+     1. UI language switch in Preferences (Як у Windows / Українська / English); first start follows the
+        Windows UI language. Needs a registry value and switching `Strings` at run time.
+     2. "Як дізнатися свою чергу" link on the Queue row opening a dialog with the 4 steps from the Android
+        app's help (search page, pick РЕМ/town/street, read "Черга"/"Підчерга", choose it in "Черга").
+     3. Main window links: "Графіки" https://www.ztoe.com.ua/unhooking-search.php and
+        "Житомиробленерго на Facebook" https://www.facebook.com/ztoe.com.ua
+     4. `donations.json` in this repo (same shape and links as the Android repo's `public/donations.json`:
+        `[{"title","url"}]`), downloaded from GitHub at every start and shown in About under a section named
+        exactly "Donations", each link with its site's favicon. Ask before caching favicons on disk.
 2. Optional, never requested: code signing (Azure Trusted Signing) to stop SmartScreen/Chrome download
    warnings for the unsigned exe.
 3. Optional: clicking a toast does not open the app window (would need a COM activator / protocol).
