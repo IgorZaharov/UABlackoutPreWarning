@@ -14,7 +14,7 @@ namespace UABlackoutPreWarning
     /// today's strip, the site notice and links to the schedules and ZTOE's Facebook page.
     /// Built in code (no designer files); laid out in real pixels by <see cref="Arrange"/>.
     /// </summary>
-    internal sealed class MainForm : Form
+    internal sealed class MainForm : Form, IGlassWindow
     {
         internal const int Width96 = 560;
 
@@ -31,6 +31,8 @@ namespace UABlackoutPreWarning
 
         private readonly Card statusCard = new Card();
         private readonly Label lblCaption, lblRange, lblCountdown, lblLegendOff, lblLegendOn;
+        private readonly StateBadge stateBadge = new StateBadge();
+        private readonly ProgressLine progress = new ProgressLine();
         private readonly TabButton tabToday = new TabButton(), tabTomorrow = new TabButton();
         private bool showTomorrow;      // which day the strip shows (the tabs); kept when the status refreshes
         private readonly Panel swatchOff = new Panel(), swatchOn = new Panel();
@@ -54,6 +56,7 @@ namespace UABlackoutPreWarning
 
             SuspendLayout();
             AutoScaleMode = AutoScaleMode.None;
+            DoubleBuffered = true;
             Font = Ui.Body;
             Text = S.AppName;
             Icon = AppInfo.LoadIcon(new Size(32, 32));
@@ -94,8 +97,9 @@ namespace UABlackoutPreWarning
             lblLegendOff = Ui.Inline(S.LegendOff, Ui.Caption, Theme.RoleSub);
             lblLegendOn = Ui.Inline(S.LegendOn, Ui.Caption, Theme.RoleSub);
             strip.Font = Ui.Caption;
+            strip.SetLegend(S.LegendOff, S.LegendOn);
             statusCard.Controls.AddRange(new Control[]
-                { lblCaption, lblRange, lblCountdown, tabToday, tabTomorrow, swatchOff, lblLegendOff, swatchOn, lblLegendOn, strip });
+                { stateBadge, lblCaption, lblRange, lblCountdown, progress, tabToday, tabTomorrow, swatchOff, lblLegendOff, swatchOn, lblLegendOn, strip });
             Controls.Add(statusCard);
 
             lblStatus = Ui.Label("", Ui.Caption, Theme.RoleSub);
@@ -140,6 +144,31 @@ namespace UABlackoutPreWarning
             T.ApplyFrame(this);
         }
 
+        // ---- Mica-like backdrop (see Backdrop) ------------------------------------
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            Backdrop.Paint(e.Graphics, this, T);
+        }
+
+        protected override void OnActivated(EventArgs e)
+        {
+            base.OnActivated(e);
+            Invalidate(true);       // Mica shows only while the window is active
+        }
+
+        protected override void OnDeactivate(EventArgs e)
+        {
+            base.OnDeactivate(e);
+            Invalidate(true);
+        }
+
+        protected override void OnMove(EventArgs e)
+        {
+            base.OnMove(e);
+            if (Backdrop.Enabled(T)) Invalidate(true);    // the wallpaper behind the window has changed
+        }
+
         // ---- status ------------------------------------------------------------
 
         public void ShowStatus(StatusView v)
@@ -151,6 +180,9 @@ namespace UABlackoutPreWarning
             lblRange.Text = v.Range;
             lblCountdown.Text = v.Countdown;
             lblCountdown.ForeColor = v.CountdownIsNote ? T.Sub : T.Warn;
+            stateBadge.PowerOff = v.PowerOff;
+            progress.AccessibleName = v.Caption;
+            progress.SetValue(v.Progress, v.ProgressIsOutage);
             tabToday.Text = S.TabToday + ", " + v.Today.ToString("dd.MM", System.Globalization.CultureInfo.InvariantCulture);
             tabTomorrow.Text = S.TabTomorrow + ", " + v.Today.AddDays(1).ToString("dd.MM", System.Globalization.CultureInfo.InvariantCulture);
             tabToday.FitWidth();
@@ -163,6 +195,12 @@ namespace UABlackoutPreWarning
             noticeCard.Visible = hasNotice;
             tips.SetToolTip(lblNotice, v.Notice ?? "");
             Arrange();
+        }
+
+        /// <summary>Window and taskbar icon: the lit bulb, or the crossed-out one during an outage.</summary>
+        public void SetPowerIcon(Icon icon)
+        {
+            if (Icon != icon) Icon = icon;
         }
 
         /// <summary>The strip shows the day of the selected tab; "now" is marked on today only.</summary>
@@ -192,7 +230,12 @@ namespace UABlackoutPreWarning
 
             // Status card.
             int pad = Ui.S(16), inner = width - 2 * pad;
-            int y = Ui.Fit(lblCaption, pad, pad, inner);
+            // Caption with the power-state badge before it.
+            stateBadge.Location = new Point(pad, pad);
+            int captionLeft = stateBadge.Right + Ui.S(8);
+            int captionHeight = Ui.TextHeight(lblCaption.Text, lblCaption.Font, inner - captionLeft + pad);
+            Ui.Fit(lblCaption, captionLeft, pad + Math.Max(0, (stateBadge.Height - captionHeight) / 2), inner - captionLeft + pad);
+            int y = Math.Max(stateBadge.Bottom, lblCaption.Bottom) + Ui.S(2);
             lblRange.Location = new Point(pad - Ui.S(1), y);
             int gap = Ui.S(12);
             if (lblRange.Right + gap + lblCountdown.Width <= pad + inner)
@@ -207,6 +250,10 @@ namespace UABlackoutPreWarning
                 lblCountdown.Location = new Point(pad, lblRange.Bottom);
                 y = lblCountdown.Bottom;
             }
+            // Progress line under the time.
+            progress.SetBounds(pad, y + Ui.S(6), inner, progress.Height);
+            y = progress.Bottom;
+
             // Day tabs (text aligned with the card's content edge) and the legend on the right.
             y += Ui.S(8);
             tabToday.Location = new Point(pad - Ui.S(8), y);
@@ -217,7 +264,7 @@ namespace UABlackoutPreWarning
             lblLegendOff.Location = new Point(swatchOn.Left - Ui.S(12) - lblLegendOff.Width, legendTop);
             swatchOff.SetBounds(lblLegendOff.Left - Ui.S(6) - sw, swatchOn.Top, sw, sw);
             y = tabToday.Bottom + Ui.S(8);
-            strip.SetBounds(pad, y, inner, Ui.S(46));
+            strip.SetBounds(pad, y, inner, Ui.S(48));
             statusCard.SetBounds(margin, top + row + Ui.S(8), width, strip.Bottom + pad);
 
             y = Ui.Fit(lblStatus, margin + Ui.S(2), statusCard.Bottom + Ui.S(8), width - Ui.S(4));
@@ -300,12 +347,56 @@ namespace UABlackoutPreWarning
 
         private string message;
 
+        private readonly ToolTip tip = new ToolTip();
+        private string offText = "", onText = "";
+        private int tipSlot = -1;
+
         public DayStrip()
         {
             DoubleBuffered = true;
             ResizeRedraw = true;
             SetStyle(ControlStyles.Selectable, false);
             AccessibleRole = AccessibleRole.Graphic;
+        }
+
+        /// <summary>Words for the hover tooltip ("12:00–12:30 · без світла").</summary>
+        public void SetLegend(string off, string on)
+        {
+            offText = off;
+            onText = on;
+        }
+
+        /// <summary>Hovering a block names its half-hour and whether there is power then.</summary>
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            float hourGap = Ui.S(3), hourWidth = (ClientSize.Width - 23 * hourGap) / 24;
+            int hour = (int)(e.X / (hourWidth + hourGap));
+            float inHour = e.X - hour * (hourWidth + hourGap);
+            int slot = hour < 0 || hour > 23 || inHour > hourWidth || slots == null ? -1 : 2 * hour + (inHour < hourWidth / 2 ? 0 : 1);
+            if (slot == tipSlot) return;
+            tipSlot = slot;
+            if (slot < 0)
+            {
+                tip.Hide(this);
+                return;
+            }
+            var text = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:00}:{1:00}–{2:00}:{3:00} · {4}",
+                slot / 2, slot % 2 * 30, (slot + 1) / 2, (slot + 1) % 2 * 30, slots[slot] ? offText : onText);
+            tip.Show(text, this, e.X + Ui.S(12), -Ui.S(28), 4000);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            tipSlot = -1;
+            tip.Hide(this);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) tip.Dispose();
+            base.Dispose(disposing);
         }
 
         public void SetTheme(Theme t)
@@ -330,7 +421,7 @@ namespace UABlackoutPreWarning
         {
             base.OnPaint(e);
             var g = e.Graphics;
-            float barTop = Ui.S(3);
+            float barTop = Ui.S(5);
             float barHeight = Ui.S(20);
             float width = ClientSize.Width;
 
@@ -347,19 +438,33 @@ namespace UABlackoutPreWarning
                 TextRenderer.DrawText(g, message, Font, new Rectangle(0, (int)barTop, (int)width, (int)barHeight), ForeColor,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
             }
+            int currentHour = now >= 0 && now <= 1 ? Math.Min(23, (int)Math.Floor(now * 24)) : -1;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             for (int h = 0; h < 24 && !(slots == null && !string.IsNullOrEmpty(message)); h++)
             {
                 float x = HourLeft(h, hourWidth, hourGap);
+                // The current hour sits a little higher, with a soft shadow under it.
+                float top = h == currentHour ? barTop - Ui.S(3) : barTop;
+                if (h == currentHour)
+                {
+                    using (var path = Ui.Round(new RectangleF(x, top + Ui.S(2), hourWidth, barHeight), Ui.S(3)))
+                    using (var shade = new SolidBrush(Color.FromArgb(60, 0, 0, 0)))
+                    {
+                        g.FillPath(shade, path);
+                    }
+                }
                 for (int k = 0; k < 2; k++)
                 {
                     int i = 2 * h + k;
                     var colour = slots == null ? Unknown : (slots[i] ? Off : On);
+                    using (var path = Ui.Round(new RectangleF(x + k * (halfWidth + halfGap), top, halfWidth, barHeight), Ui.S(2)))
                     using (var brush = new SolidBrush(colour))
                     {
-                        g.FillRectangle(brush, x + k * (halfWidth + halfGap), barTop, halfWidth, barHeight);
+                        g.FillPath(brush, path);
                     }
                 }
             }
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
 
             if (now >= 0 && now <= 1)
             {

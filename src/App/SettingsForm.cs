@@ -15,7 +15,7 @@ namespace UABlackoutPreWarning
     /// cards, each with a title, a short hint and its control on the right. Nothing is applied until Save.
     /// Built in code (no designer files); laid out in real pixels by <see cref="Arrange"/>.
     /// </summary>
-    internal sealed class SettingsForm : Form
+    internal sealed class SettingsForm : Form, IGlassWindow
     {
         private const int Width96 = 560;
         private static readonly string[] LanguageValues =
@@ -63,6 +63,7 @@ namespace UABlackoutPreWarning
 
             SuspendLayout();
             AutoScaleMode = AutoScaleMode.None;
+            DoubleBuffered = true;
             Font = Ui.Body;
             Text = S.SettingsTitle;
             Icon = AppInfo.LoadIcon(new Size(32, 32));
@@ -264,6 +265,31 @@ namespace UABlackoutPreWarning
         {
             base.OnHandleCreated(e);
             T.ApplyFrame(this);
+        }
+
+        // ---- Mica-like backdrop (see Backdrop) ------------------------------------
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            Backdrop.Paint(e.Graphics, this, T);
+        }
+
+        protected override void OnActivated(EventArgs e)
+        {
+            base.OnActivated(e);
+            Invalidate(true);       // Mica shows only while the window is active
+        }
+
+        protected override void OnDeactivate(EventArgs e)
+        {
+            base.OnDeactivate(e);
+            Invalidate(true);
+        }
+
+        protected override void OnMove(EventArgs e)
+        {
+            base.OnMove(e);
+            if (Backdrop.Enabled(T)) Invalidate(true);    // the wallpaper behind the window has changed
         }
 
         protected override void OnLoad(EventArgs e)

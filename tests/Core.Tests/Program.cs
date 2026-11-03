@@ -61,6 +61,11 @@ namespace UABlackoutPreWarning.Tests
             Run("Next blackout: --:-- when tomorrow has no outages", NextNoneTomorrow);
             Run("Next blackout: power off now", NextPowerOffNow);
             Run("Strings: tomorrow strip description", StripDescriptionTomorrow);
+            Run("Progress: through the current outage", ProgressDuringOutage);
+            Run("Progress: from the last outage to the next one", ProgressBetweenOutages);
+            Run("Progress: from midnight when there was no outage before", ProgressFromMidnight);
+            Run("Progress: none when nothing is ahead", ProgressUnknown);
+            Run("Power state for the tray icon", PowerStateForIcon);
 
             Console.WriteLine();
             Console.WriteLine("{0} passed, {1} failed", passed, failed);
@@ -537,6 +542,51 @@ namespace UABlackoutPreWarning.Tests
             Equal("Завтра без світла: 09:00–10:00", Strings.Ukrainian().StripDescription(slots, true), "uk tomorrow");
             Equal("No blackouts scheduled tomorrow", Strings.English().StripDescription(new bool[48], true), "en none tomorrow");
             Equal("No schedule for tomorrow yet", Strings.English().StripDescription(null, true), "en not published");
+        }
+
+        private static void Near(double expected, double actual, string what)
+        {
+            True(Math.Abs(expected - actual) < 0.001, what + ": expected " + expected + " but was " + actual);
+        }
+
+        private static void ProgressDuringOutage()
+        {
+            // 19:00-22:00 on 28.10; at 20:00 a third has passed.
+            var next = NextBlackout.Describe(Strings.Ukrainian(), EveningPage(), "5.2", new DateTime(2026, 10, 28, 20, 0, 0));
+            Near(1.0 / 3, next.Progress, "elapsed share of the outage");
+            True(next.ProgressIsOutage, "outage progress");
+        }
+
+        private static void ProgressBetweenOutages()
+        {
+            // Last outage ended 22:00 on 28.10, next starts 09:00 on 29.10 (11 h); at 22:30 half an hour has passed.
+            var next = NextBlackout.Describe(Strings.Ukrainian(), EveningPage(), "5.2", new DateTime(2026, 10, 28, 22, 30, 0));
+            Near(0.5 / 11, next.Progress, "share of the time between outages");
+            True(!next.ProgressIsOutage, "waiting progress");
+        }
+
+        private static void ProgressFromMidnight()
+        {
+            var page = new ParsedPage();
+            var day = new DaySchedule(new DateTime(2026, 10, 28));
+            var off = new bool[48];
+            off[20] = off[21] = true;                                   // 10:00-11:00
+            day.AddRow("5.2", off);
+            page.Days.Add(day);
+            var next = NextBlackout.Describe(Strings.Ukrainian(), page, "5.2", new DateTime(2026, 10, 28, 8, 0, 0));
+            Near(0.8, next.Progress, "8 of the 10 hours since midnight");
+        }
+
+        private static void ProgressUnknown()
+        {
+            var next = NextBlackout.Describe(Strings.Ukrainian(), EveningPage(), "5.2", new DateTime(2026, 10, 29, 21, 30, 0));
+            True(next.Progress < 0, "no bar when nothing is ahead");
+        }
+
+        private static void PowerStateForIcon()
+        {
+            True(NextBlackout.Describe(Strings.Ukrainian(), EveningPage(), "5.2", new DateTime(2026, 10, 28, 20, 0, 0)).PowerOff, "off at 20:00");
+            True(!NextBlackout.Describe(Strings.Ukrainian(), EveningPage(), "5.2", new DateTime(2026, 10, 28, 22, 30, 0)).PowerOff, "on at 22:30");
         }
 
         // ---- mini framework -----------------------------------------------------

@@ -122,6 +122,9 @@ namespace UABlackoutPreWarning
         {
             var role = c.Tag as string;
             var parentBack = c.Parent != null ? c.Parent.BackColor : Window;
+            // Text and pictures placed straight on a window with the Mica-like backdrop let it show through.
+            bool onGlass = c.Parent != null && Backdrop.IsGlass(c.Parent, this);
+            var labelBack = onGlass ? Color.Transparent : parentBack;
 
             if (c is Form)
             {
@@ -133,6 +136,7 @@ namespace UABlackoutPreWarning
                 var card = (Card)c;
                 card.BackColor = Card;
                 card.BorderColor = CardStroke;
+                card.Theme = this;
                 card.Invalidate();
             }
             else if (c is IThemed)
@@ -143,7 +147,7 @@ namespace UABlackoutPreWarning
             else if (c is LinkLabel)
             {
                 var l = (LinkLabel)c;
-                l.BackColor = parentBack;
+                l.BackColor = labelBack;
                 l.LinkColor = Accent;
                 l.ActiveLinkColor = Accent;
                 l.VisitedLinkColor = Accent;
@@ -151,7 +155,7 @@ namespace UABlackoutPreWarning
             }
             else if (c is Label)
             {
-                c.BackColor = parentBack;
+                c.BackColor = labelBack;
                 c.ForeColor = role == RoleSub ? Sub : (role == RoleWarn ? Warn : Text);
             }
             else if (c is TextBox || c is NumericUpDown)
@@ -170,7 +174,7 @@ namespace UABlackoutPreWarning
             else if (role == RoleDivider) c.BackColor = CardStroke;
             else
             {
-                c.BackColor = parentBack;
+                c.BackColor = c is PictureBox || c.GetType() == typeof(Panel) ? labelBack : parentBack;
                 c.ForeColor = Text;
             }
 
@@ -424,6 +428,22 @@ namespace UABlackoutPreWarning
             return p;
         }
 
+        /// <summary>
+        /// Fills a control's background: the backdrop when it sits directly on a glass window, otherwise its
+        /// parent's colour. Returns the colour to blend hover states with.
+        /// </summary>
+        public static Color PaintBack(Graphics g, Control c, Theme t)
+        {
+            if (c.Parent != null && Backdrop.IsGlass(c.Parent, t))
+            {
+                Backdrop.Paint(g, c, t);
+                return t.Window;
+            }
+            var back = c.Parent != null ? c.Parent.BackColor : t.Window;
+            g.Clear(back);
+            return back;
+        }
+
         /// <summary>The keyboard focus visual: a 2 px rounded outline in the text colour.</summary>
         public static void FocusRing(Graphics g, Rectangle bounds, Color colour)
         {
@@ -435,10 +455,14 @@ namespace UABlackoutPreWarning
         }
     }
 
-    /// <summary>A rounded surface (4 px corners) with a 1 px stroke: the Windows 11 settings card.</summary>
+    /// <summary>
+    /// A rounded surface (8 px corners): the Windows 11 card. Depth comes from a faint edge that is a little
+    /// darker at the bottom, as a soft shadow would make it; in High Contrast a plain 1 px border.
+    /// </summary>
     internal sealed class Card : Panel
     {
         public Color BorderColor = SystemColors.ControlDark;
+        public Theme Theme = Theme.LightTheme;
 
         public Card()
         {
@@ -449,14 +473,38 @@ namespace UABlackoutPreWarning
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             var g = e.Graphics;
-            g.Clear(Parent != null ? Parent.BackColor : BackColor);
+            var outside = Ui.PaintBack(g, this, Theme);
             g.SmoothingMode = SmoothingMode.AntiAlias;
-            using (var path = Ui.Round(new RectangleF(0.5F, 0.5F, Width - 1, Height - 1), Ui.S(4)))
+            float radius = Ui.S(8);
+            var shape = new RectangleF(0.5F, 0.5F, Width - 1, Height - 1);
+            if (Theme.HighContrast)
+            {
+                using (var path = Ui.Round(shape, radius))
+                using (var fill = new SolidBrush(BackColor))
+                using (var pen = new Pen(BorderColor))
+                {
+                    g.FillPath(fill, path);
+                    g.DrawPath(pen, path);
+                }
+                return;
+            }
+            // Shadow edge: the whole outline, then the card shifted 1 px up so only the bottom edge stays darker.
+            var shadow = Theme.Dark ? Color.FromArgb(0x14, 0x14, 0x14) : Theme.Blend(outside, Color.Black, 0.12);
+            using (var path = Ui.Round(shape, radius))
+            using (var b = new SolidBrush(shadow))
+            {
+                g.FillPath(b, path);
+            }
+            var edge = Theme.Dark ? Theme.Blend(BackColor, Color.White, 0.06) : Theme.Blend(BackColor, Color.Black, 0.06);
+            using (var path = Ui.Round(new RectangleF(0.5F, 0.5F, Width - 1, Height - 2), radius))
+            using (var b = new SolidBrush(edge))
+            {
+                g.FillPath(b, path);
+            }
+            using (var path = Ui.Round(new RectangleF(1.5F, 1.5F, Width - 3, Height - 4), radius - 1))
             using (var fill = new SolidBrush(BackColor))
-            using (var pen = new Pen(BorderColor))
             {
                 g.FillPath(fill, path);
-                g.DrawPath(pen, path);
             }
         }
     }
@@ -470,10 +518,11 @@ namespace UABlackoutPreWarning
     }
 
     /// <summary>A Windows 11 style button, drawn by hand in both themes; keyboard and screen readers as a normal Button.</summary>
-    internal sealed class FluentButton : Button, IThemed
+    internal sealed class FluentButton : Button, IThemed, IAnimated
     {
         private Theme theme = Theme.LightTheme;
         private bool hover, pressed;
+        private readonly Fader hoverFade = new Fader(), pressFade = new Fader();
 
         public ButtonKind Kind;
 
@@ -511,46 +560,67 @@ namespace UABlackoutPreWarning
             Invalidate();
         }
 
-        protected override void OnMouseEnter(EventArgs e) { hover = true; Invalidate(); base.OnMouseEnter(e); }
-        protected override void OnMouseLeave(EventArgs e) { hover = false; pressed = false; Invalidate(); base.OnMouseLeave(e); }
-        protected override void OnMouseDown(MouseEventArgs e) { if (e.Button == MouseButtons.Left) { pressed = true; Invalidate(); } base.OnMouseDown(e); }
-        protected override void OnMouseUp(MouseEventArgs e) { pressed = false; Invalidate(); base.OnMouseUp(e); }
+        private void Fade()
+        {
+            bool a = hoverFade.To(hover ? 1 : 0), b = pressFade.To(pressed ? 1 : 0);
+            if (a || b) Motion.Start(this);
+            Invalidate();
+        }
+
+        public bool Step()
+        {
+            bool a = hoverFade.Step(), b = pressFade.Step();
+            return a || b;
+        }
+
+        protected override void OnMouseEnter(EventArgs e) { hover = true; Fade(); base.OnMouseEnter(e); }
+        protected override void OnMouseLeave(EventArgs e) { hover = false; pressed = false; Fade(); base.OnMouseLeave(e); }
+        protected override void OnMouseDown(MouseEventArgs e) { if (e.Button == MouseButtons.Left) { pressed = true; Fade(); } base.OnMouseDown(e); }
+        protected override void OnMouseUp(MouseEventArgs e) { pressed = false; Fade(); base.OnMouseUp(e); }
         protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
         protected override void OnLostFocus(EventArgs e) { Invalidate(); base.OnLostFocus(e); }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
-            var back = Parent != null ? Parent.BackColor : theme.Window;
-            g.Clear(back);
+            var back = Ui.PaintBack(g, this, theme);
             g.SmoothingMode = SmoothingMode.AntiAlias;
+            double h = hoverFade.Value, p = pressFade.Value;
 
-            Color fill, text, stroke;
+            Color rest, fill, text, stroke;
+            bool fillRest;
             if (Kind == ButtonKind.Accent)
             {
-                fill = pressed ? Theme.Blend(theme.Accent, back, 0.2) : (hover ? Theme.Blend(theme.Accent, back, 0.1) : theme.Accent);
+                rest = theme.Accent;
+                fill = Theme.Blend(Theme.Blend(rest, back, 0.1 * h), back, 0.1 * p);
                 text = theme.OnAccent;
                 stroke = theme.HighContrast ? theme.Text : fill;
+                fillRest = true;
             }
             else if (Kind == ButtonKind.Subtle)
             {
-                fill = pressed ? Theme.Blend(back, theme.Text, 0.04) : (hover ? Theme.Blend(back, theme.Text, 0.07) : back);
+                fill = Theme.Blend(back, theme.Text, 0.07 * h - 0.03 * p);
                 text = theme.Text;
                 stroke = theme.HighContrast ? theme.Text : fill;     // High Contrast: every button shows its edge
+                fillRest = h > 0 || p > 0 || theme.HighContrast;     // at rest a subtle button is only its glyph
             }
             else
             {
-                fill = pressed ? Theme.Blend(theme.Control, back, 0.5) : (hover ? Theme.Blend(theme.Control, theme.Text, 0.03) : theme.Control);
-                text = pressed ? theme.Sub : theme.Text;
+                fill = Theme.Blend(Theme.Blend(theme.Control, theme.Text, 0.03 * h), back, 0.5 * p);
+                text = p > 0.5 ? theme.Sub : theme.Text;
                 stroke = theme.ControlStroke;
+                fillRest = true;
             }
 
-            using (var path = Ui.Round(new RectangleF(0.5F, 0.5F, Width - 1, Height - 1), Ui.S(4)))
-            using (var brush = new SolidBrush(fill))
-            using (var pen = new Pen(stroke))
+            if (fillRest)
             {
-                g.FillPath(brush, path);
-                g.DrawPath(pen, path);
+                using (var path = Ui.Round(new RectangleF(0.5F, 0.5F, Width - 1, Height - 1), Ui.S(4)))
+                using (var brush = new SolidBrush(fill))
+                using (var pen = new Pen(stroke))
+                {
+                    g.FillPath(brush, path);
+                    g.DrawPath(pen, path);
+                }
             }
             TextRenderer.DrawText(g, Text, Font, ClientRectangle, text,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
@@ -562,10 +632,17 @@ namespace UABlackoutPreWarning
     /// Windows 11 toggle switch. A CheckBox underneath, so Space toggles it and screen readers announce a
     /// check box with its <see cref="Control.Text"/> and state; only the state words and the track are drawn.
     /// </summary>
-    internal sealed class ToggleSwitch : CheckBox, IThemed
+    internal sealed class ToggleSwitch : CheckBox, IThemed, IAnimated
     {
         private Theme theme = Theme.LightTheme;
         private bool hover;
+        private readonly Fader slide = new Fader();     // 0 = off (knob left) .. 1 = on (knob right)
+        private bool slideReady;
+
+        public bool Step()
+        {
+            return slide.Step();
+        }
 
         /// <summary>Drawn left of the track ("Увімк." / "Вимк."); empty strings draw the track only.</summary>
         public string OnText = "", OffText = "";
@@ -593,7 +670,23 @@ namespace UABlackoutPreWarning
             Invalidate();
         }
 
-        protected override void OnCheckedChanged(EventArgs e) { Invalidate(); base.OnCheckedChanged(e); }
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            // Slide only when the user flips it on screen; a value set before showing jumps straight there.
+            if (slideReady && Visible && slide.To(Checked ? 1 : 0)) Motion.Start(this);
+            else slide.Value = Checked ? 1 : 0;
+            Invalidate();
+            base.OnCheckedChanged(e);
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            slide.Value = Checked ? 1 : 0;
+            slide.To(Checked ? 1 : 0);
+            slideReady = true;
+        }
+
         protected override void OnMouseEnter(EventArgs e) { hover = true; Invalidate(); base.OnMouseEnter(e); }
         protected override void OnMouseLeave(EventArgs e) { hover = false; Invalidate(); base.OnMouseLeave(e); }
         protected override void OnGotFocus(EventArgs e) { Invalidate(); base.OnGotFocus(e); }
@@ -602,8 +695,7 @@ namespace UABlackoutPreWarning
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
-            var back = Parent != null ? Parent.BackColor : theme.Window;
-            g.Clear(back);
+            var back = Ui.PaintBack(g, this, theme);
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
             int w = Ui.S(40), h = Ui.S(20);
@@ -617,21 +709,21 @@ namespace UABlackoutPreWarning
             }
 
             float knob = Ui.S(hover ? 14 : 12);
+            double on = slide.Value;                       // 0..1 while the knob slides
             using (var path = Ui.Round(track, track.Height / 2))
             {
-                if (Checked)
+                var off = hover ? Theme.Blend(back, theme.Text, 0.05) : back;
+                var accent = hover ? Theme.Blend(theme.Accent, back, 0.1) : theme.Accent;
+                using (var b = new SolidBrush(Theme.Blend(off, accent, on))) g.FillPath(b, path);
+                if (on < 1 || theme.HighContrast)
                 {
-                    using (var b = new SolidBrush(hover ? Theme.Blend(theme.Accent, back, 0.1) : theme.Accent)) g.FillPath(b, path);
-                }
-                else
-                {
-                    using (var b = new SolidBrush(hover ? Theme.Blend(back, theme.Text, 0.05) : back)) g.FillPath(b, path);
-                    using (var p = new Pen(theme.Sub)) g.DrawPath(p, path);
+                    using (var p = new Pen(Theme.Blend(theme.Sub, accent, on))) g.DrawPath(p, path);
                 }
             }
-            float cx = Checked ? track.Right - track.Height / 2 : track.Left + track.Height / 2;
+            float left = track.Left + track.Height / 2, right = track.Right - track.Height / 2;
+            float cx = left + (right - left) * (float)on;
             float cy = track.Top + track.Height / 2;
-            using (var b = new SolidBrush(Checked ? theme.OnAccent : theme.Sub))
+            using (var b = new SolidBrush(Theme.Blend(theme.Sub, theme.OnAccent, on)))
             {
                 g.FillEllipse(b, cx - knob / 2, cy - knob / 2, knob, knob);
             }

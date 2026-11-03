@@ -1,4 +1,4 @@
-# UABlackoutPreWarning — Design (as built, v1.4.0)
+# UABlackoutPreWarning — Design (as built, v1.5.0)
 
 UABlackoutPreWarning is a portable Windows tray utility. It reads the Zhytomyroblenergo (ZTOE) outage
 schedule and warns the user a set number of minutes before each scheduled blackout, so work can be
@@ -39,8 +39,8 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 
 | ID | Requirement |
 | --- | --- |
-| F1 | Tray icon. Right-click menu: Open, Check now, About, Close Application. Double-click opens the main window. |
-| F2 | Main window: queue, gear (Preferences), "?" (About) and the dark-theme switch; status card with the next blackout (counted into tomorrow's grid when the site has published it; "--:--" plus a note when nothing is ahead: tomorrow not published, or no outages tomorrow) and a day strip with "Сьогодні" / "Завтра" tabs; site notice; links "Графіки" (`https://www.ztoe.com.ua/unhooking-search.php`) and "Житомиробленерго на Facebook" (`https://www.facebook.com/ztoe.com.ua`). Separate Preferences window in three sections: Графік (schedule URL, queue), Сповіщення (lead time, refresh interval, test notification), Система (UI language, Start with Windows, Restore defaults); Check now and Save at the bottom. |
+| F1 | Tray icon: a lit (yellow) bulb with power, a grey bulb crossed out in red during an outage; the main window's title-bar and taskbar icon follow it. Right-click menu: Open, Check now, About, Close Application. Double-click opens the main window. |
+| F2 | Main window: queue, gear (Preferences), "?" (About) and the dark-theme switch; status card with the next blackout (counted into tomorrow's grid when the site has published it; "--:--" plus a note when nothing is ahead: tomorrow not published, or no outages tomorrow), a bulb badge before the caption (crossed out during an outage), a thin progress line under the time (share of the current outage, or of the time from the previous outage's end or midnight to the next start; announced as a progress bar), and a day strip with "Сьогодні" / "Завтра" tabs (rounded half-hour blocks, current hour raised, hover tooltip "12:00–12:30 · без світла"); site notice; links "Графіки" (`https://www.ztoe.com.ua/unhooking-search.php`) and "Житомиробленерго на Facebook" (`https://www.facebook.com/ztoe.com.ua`). Separate Preferences window in three sections: Графік (schedule URL, queue), Сповіщення (lead time, refresh interval, test notification), Система (UI language, Start with Windows, Restore defaults); Check now and Save at the bottom. |
 | F3–F4 | Download and parse on start, then every refresh interval. |
 | F5 | Consecutive red slots form one blackout series. |
 | F6 | One notification per series, X minutes before it starts. |
@@ -55,7 +55,9 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | F12 | UI language: Preferences "Мова інтерфейсу" with Як у Windows (default: Ukrainian if the Windows display language is Ukrainian, otherwise English), Українська, English. Applied on Save: the tray menu and the open windows are rebuilt in the new language at the same place. |
 | F16 | Queue row in Preferences: link "Як дізнатися свою чергу" opens a dialog with the four steps of the Android app's help. |
 | F17 | Donations: `donations.json` in this repository (the Android app's format, `[{"title","url"}]`) is read from `raw.githubusercontent.com/…/main/donations.json` at every start; About lists each https link with its site's favicon (`/favicon.ico`, else the page's `<link rel="icon">`, else a letter tile). Offline or no file: no Donations section. |
-| F18 | Windows 11 look (issue #1): Fluent colours and type ramp, 4 px cards and controls, borderless icon buttons, accent only on Save and links; title bar blended with the window (Mica on 22H2+, caption colour on 21H2, plain dark/light title bar on Windows 10). |
+| F18 | Windows 11 look (issue #1): Fluent colours and type ramp, 8 px cards with a soft shadow edge (1 px border in High Contrast), 4 px controls, borderless icon buttons, accent only on Save and links; title bar blended with the window (Mica on 22H2+, caption colour on 21H2, plain dark/light title bar on Windows 10). |
+| F19 | Mica-like window background drawn by the app (`Backdrop` in `Visuals.cs`): the desktop wallpaper (`SPI_GETDESKWALLPAPER`) cropped like "Fill", shrunk to 64 px wide (stretching it back blurs it) and tinted with the theme's window colour (alpha 235 light / 217 dark), sampled at the window's screen position. Solid colour while the window is inactive, with "Transparency effects" off, in High Contrast or without a wallpaper picture. Works on Windows 10 and every Windows 11 build. System Mica was not used: it needs per-pixel alpha, which WinForms text and native controls do not paint. |
+| F20 | Motion: 150 ms ease on button hover/press and the toggle switch knob, one shared 15 ms timer that runs only while something moves; off when Windows' "Animation effects" are off. |
 
 ## Architecture
 
@@ -83,7 +85,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | `src/Core/ScheduleParser.cs` | `ScheduleParser` | Grid(s), dates, update time, banner, row labels, red-cell detection | Yes |
 | `src/Core/Schedule.cs` | `SeriesBuilder` | Red slots → series, midnight join across days, current/next series | Yes |
 | `src/Core/Schedule.cs` | `WarningPlanner` | Which warnings are due; remembers the last 20 warned series | Yes |
-| `src/Core/NextBlackout.cs` | `NextBlackout` | Main window's next-blackout caption, time (or "--:--") and countdown or note | Yes |
+| `src/Core/NextBlackout.cs` | `NextBlackout` | Main window's next-blackout caption, time (or "--:--"), countdown or note, power state and progress share | Yes |
 | `src/Core/Schedule.cs` | `KyivClock`, `PageDecoder` | Kyiv wall-clock time; charset detection (header, meta, cp1251) | Yes |
 | `src/Core/Settings.cs` | `AppSettings` | Defaults, ranges, normalisation, queue list, UI language | Yes |
 | `src/Core/Strings.cs` | `Strings` | Ukrainian and English text, language choice, time/duration formatting, the day strip's spoken text | Yes |
@@ -93,6 +95,7 @@ days, and a next outage on another day is labelled ("завтра 09:00–12:00"
 | `src/App/SettingsForm.cs` | `SettingsForm`, `StatusLabel` | Preferences: sections of cards, validation (error text under the address), Restore defaults, Save ("Saved" announced); opens over the main window, one at a time | No |
 | `src/App/QueueHelpForm.cs` | `QueueHelpForm` | "Як дізнатися свою чергу" dialog | No |
 | `src/App/Theme.cs` | `Theme`, `Ui`, `Card`, `FluentButton`, `ToggleSwitch`, `FieldHost`, `FluentCombo` | Windows 11 colours applied in place, fonts and pixel scale, the owner-drawn controls, title bar and Mica (DWM), tray menu | No |
+| `src/App/Visuals.cs` | `Backdrop`, `Motion`, `Fader`, `Bulb`, `StateIcons`, `StateBadge`, `ProgressLine` | Mica-like backdrop, animations, the bulb drawn at any size (tray/window icons, badge), the progress line | No |
 | `src/App/AboutForm.cs` | `AboutForm` | Name, version, description, links to the author, the manual and Issues, Donations | No |
 | `src/App/Toasts.cs` | `Toasts` | AppUserModelID registration, toast icon file, toast XML, show via WinRT | No |
 | `src/App/Platform.cs` | `RegistrySettingsStore`, `Autostart`, `Http`, `ScheduleFetcher`, `DonationFetcher`, `AppInfo` | Registry, Run key, HTTP download, donations and favicons, links | No |

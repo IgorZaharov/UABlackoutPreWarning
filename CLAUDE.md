@@ -1,8 +1,8 @@
 # CLAUDE.md - UABlackoutPreWarning
 
 Handoff and working notes for Claude (Claude Code or claude.ai). Read this first, then `docs/DESIGN.md`.
-Owner: Igor Zakharov (GitHub `IgorZaharov`). Last updated 2026-11-03, latest release **v1.3.4**
-(`main` is at 1.4.0, not yet released).
+Owner: Igor Zakharov (GitHub `IgorZaharov`). Last updated 2026-11-03, latest release **v1.4.0**
+(`main` is at 1.5.0, not yet released).
 
 ## 1. Goal
 
@@ -69,11 +69,12 @@ Windows notification per outage series, N minutes before it starts.
 | `src/App/SettingsForm.cs` | "Параметри"/"Preferences": sections Графік / Сповіщення / Система as cards; Save, Check now |
 | `src/App/QueueHelpForm.cs` | "Як дізнатися свою чергу" dialog (no title bar) |
 | `src/App/AboutForm.cs` | Version, description, links: author, manual (README), Issues; "Donations" section |
+| `src/App/Visuals.cs` | `Backdrop` (Mica-like wallpaper backdrop drawn by the app), `Motion`/`Fader` (150 ms animations), `Bulb`/`StateIcons` (tray, taskbar and window icons follow the power state), `StateBadge`, `ProgressLine` |
 | `src/App/Theme.cs` | Windows 11 colours, `Ui` (pixel scale `Ui.S`, fonts, glyphs), owner-drawn `Card`, `FluentButton`, `ToggleSwitch`, `FieldHost`, `FluentCombo`; title bar/Mica via DWM; tray menu |
 | `src/App/Toasts.cs` | AUMID registration, toast icon PNG, toast XML, WinRT show, COM release |
 | `src/App/Platform.cs` | `RegistrySettingsStore` (+ `MainWindowPosition`), `Autostart`, `Http`, `ScheduleFetcher`, `DonationFetcher` (json + favicons, memory only), `MemoryTrim`, `AppInfo` (URLs, `OpenUrl`) |
 | `donations.json` | Donation links shown in About; the app reads it from `raw.githubusercontent.com/.../main/donations.json`, so edits take effect after a push, without a release |
-| `tests/Core.Tests/Program.cs` | Dependency-free test runner, 35 tests; fixtures in `tests/Fixtures/` (saved ZTOE pages) |
+| `tests/Core.Tests/Program.cs` | Dependency-free test runner, 40 tests; fixtures in `tests/Fixtures/` (saved ZTOE pages) |
 | `tools/screenshots/` | `Shots.cs` + `shots.cmd`: runs the real app for screenshots or a memory probe. Mode `windows` = window pictures only (both themes, queue help, a language switch; uses the local donations.json), safe to run on Igor's PC |
 | `tools/make_icon.py` | Generates `assets/app.ico` (crossed-out lightbulb) |
 | `.github/workflows/build.yml` | Build + tests on every push; attaches `UABlackoutPreWarning.zip` to releases |
@@ -140,6 +141,7 @@ UI layout rule since 1.4.0: windows use `AutoScaleMode.None` and place every con
 | 1.3.4 | Main window reopens where it was last closed (`MainWindowPosition`, centred if off-screen) |
 | 1.3.5 | Accessibility fixes from a UI review: Queue/minute fields named for screen readers; invalid URL error shown as text under the field (was an ErrorProvider icon); dark day-strip red `#F25F55` (3.5:1 against grey) |
 | 1.4.0 | Issue #1 Windows 11 redesign (approved mockup) + UI language switch, queue help dialog, main-window links (Графіки, Facebook), Donations from donations.json with favicons, Сьогодні / Завтра tabs and "--:--" when no next blackout is known (`Core/NextBlackout.cs`). Checked with `shots.cmd ... windows` on Igor's PC (uk-UA and en-US, both themes, 100 %); not yet at 125 %/150 % or on Windows 10 |
+| 1.5.0 | "Premium" polish from the updated mockup: Mica-like backdrop drawn from the wallpaper (system Mica needs per-pixel alpha, which WinForms cannot paint; works on 21H2 and Win10), 8 px cards with a shadow edge, 150 ms hover/press and switch animations, bulb badge and progress line in the status card, rounded strip blocks with the current hour raised and a hover tooltip; tray/taskbar/window icon = lit bulb, crossed-out during an outage. `shots.cmd` captures show solid backgrounds (Windows does not give Shots.exe the foreground, and the backdrop shows only on the active window); Mica checked with a probe on Igor's PC |
 
 ## 7. Open items
 
@@ -157,7 +159,6 @@ UI layout rule since 1.4.0: windows use `AutoScaleMode.None` and place every con
 
 ## 8. Next steps
 
-1. Push `main` (donations.json must be on GitHub before the app can show the Donations section).
-2. Igor tries 1.4.0 on his PC at his usual scaling (125 %): all windows, both themes, both languages,
-   the language switch, queue help, links, Donations; Narrator on Preferences.
-3. Igor publishes v1.4.0; verify the release (see section 4) and close issue #1.
+1. Igor tries 1.5.0 on his PC (125 %): Mica on all windows, both themes, icon switching during an outage,
+   strip tooltip, animations; Narrator on the progress line.
+2. Igor publishes v1.5.0; verify the release (see section 4) and close issue #1.

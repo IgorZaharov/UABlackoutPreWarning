@@ -15,7 +15,7 @@ namespace UABlackoutPreWarning
     /// About window: name, version, description, links to the author, the manual and Issues, and the
     /// "Donations" section from donations.json (read from GitHub at start-up; hidden until it arrives).
     /// </summary>
-    internal sealed class AboutForm : Form
+    internal sealed class AboutForm : Form, IGlassWindow
     {
         private const int Width96 = 480;
 
@@ -48,6 +48,7 @@ namespace UABlackoutPreWarning
             theme = t;
             SuspendLayout();
             AutoScaleMode = AutoScaleMode.None;
+            DoubleBuffered = true;
             Font = Ui.Body;
             Text = S.AboutTitle;
             Icon = AppInfo.LoadIcon(new Size(32, 32));
@@ -247,6 +248,31 @@ namespace UABlackoutPreWarning
         {
             base.OnHandleCreated(e);
             theme.ApplyFrame(this);
+        }
+
+        // ---- Mica-like backdrop (see Backdrop) ------------------------------------
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            Backdrop.Paint(e.Graphics, this, theme);
+        }
+
+        protected override void OnActivated(EventArgs e)
+        {
+            base.OnActivated(e);
+            Invalidate(true);       // Mica shows only while the window is active
+        }
+
+        protected override void OnDeactivate(EventArgs e)
+        {
+            base.OnDeactivate(e);
+            Invalidate(true);
+        }
+
+        protected override void OnMove(EventArgs e)
+        {
+            base.OnMove(e);
+            if (Backdrop.Enabled(theme)) Invalidate(true);    // the wallpaper behind the window has changed
         }
 
         protected override void Dispose(bool disposing)

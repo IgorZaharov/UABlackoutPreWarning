@@ -26,6 +26,9 @@ namespace UABlackoutPreWarning
         public DateTime Today;
         public bool[] TodaySlots;       // null when the site has no grid for today
         public bool[] TomorrowSlots;    // null until the site publishes tomorrow's grid (in the evening)
+        public bool PowerOff;           // an outage is in progress
+        public double Progress = -1;    // 0..1 for the line under the time; negative hides it
+        public bool ProgressIsOutage;
         public double NowFraction;      // 0..1 position of "now" on the strip
         public string StatusLine;
         public bool StatusIsError;
@@ -49,6 +52,8 @@ namespace UABlackoutPreWarning
         private readonly System.Windows.Forms.Timer retryTimer = new System.Windows.Forms.Timer();
         private readonly System.Windows.Forms.Timer trimTimer = new System.Windows.Forms.Timer();
         private readonly Control invoker = new Control();
+        private readonly StateIcons icons = new StateIcons();
+        private bool iconOff, iconShown;
         private readonly TaskScheduler uiScheduler;
         private readonly RegisteredWaitHandle showWait;
 
@@ -87,7 +92,7 @@ namespace UABlackoutPreWarning
             BuildMenu();
 
             tray = new NotifyIcon();
-            tray.Icon = AppInfo.LoadIcon(SystemInformation.SmallIconSize);
+            tray.Icon = icons.Small(false);
             tray.Text = S.AppName;
             tray.ContextMenuStrip = menu;
             tray.DoubleClick += delegate { ShowWindow(); };
@@ -201,6 +206,7 @@ namespace UABlackoutPreWarning
                     store.SaveWindowPosition(bounds.Location);
                 };
             }
+            form.SetPowerIcon(icons.Large(iconOff));
             form.ShowStatus(BuildStatus(KyivClock.Now));
             if (!form.Visible) form.Show();
             if (form.WindowState == FormWindowState.Minimized) form.WindowState = FormWindowState.Normal;
@@ -278,12 +284,12 @@ namespace UABlackoutPreWarning
         private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
         {
             if (e.Category == UserPreferenceCategory.Color || e.Category == UserPreferenceCategory.Accessibility ||
-                e.Category == UserPreferenceCategory.General)
+                e.Category == UserPreferenceCategory.General || e.Category == UserPreferenceCategory.Desktop)
             {
                 RunOnUi(delegate
                 {
-                    var next = Theme.For(settings.DarkTheme);
-                    if (next == theme) return;      // the same fixed light or dark set
+                    // Wallpaper, transparency or contrast may have changed: rebuild the backdrop and recolour.
+                    Backdrop.Reset();
                     ApplyThemeEverywhere();
                 });
             }
@@ -555,7 +561,20 @@ namespace UABlackoutPreWarning
         {
             if (series == null) series = CurrentSeries();
             tray.Text = Tooltip(now, series);
-            if (form != null && !form.IsDisposed && form.Visible) form.ShowStatus(BuildStatus(now, series));
+
+            // Tray, taskbar and window icon: lit bulb with power, crossed-out bulb during an outage.
+            bool off = SeriesBuilder.Current(series, now) != null;
+            if (!iconShown || off != iconOff)
+            {
+                tray.Icon = icons.Small(off);
+                iconOff = off;
+                iconShown = true;
+            }
+            if (form != null && !form.IsDisposed)
+            {
+                form.SetPowerIcon(icons.Large(off));
+                if (form.Visible) form.ShowStatus(BuildStatus(now, series));
+            }
         }
 
         private string Tooltip(DateTime now, List<BlackoutSeries> series)
@@ -598,6 +617,9 @@ namespace UABlackoutPreWarning
                 v.Range = next.Range;
                 v.Countdown = next.Countdown;
                 v.CountdownIsNote = next.CountdownIsNote;
+                v.PowerOff = next.PowerOff;
+                v.Progress = next.Progress;
+                v.ProgressIsOutage = next.ProgressIsOutage;
 
                 var today = page.FindDay(now);
                 var tomorrow = page.FindDay(now.AddDays(1));
@@ -717,6 +739,7 @@ namespace UABlackoutPreWarning
                 tray.Dispose();
                 menu.Dispose();
                 if (form != null) form.Dispose();
+                icons.Dispose();
                 if (about != null) about.Dispose();
                 DisposeIcons(donations);
                 if (settingsForm != null) settingsForm.Dispose();
